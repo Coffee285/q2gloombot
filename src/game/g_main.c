@@ -204,15 +204,15 @@ static void G_RunFrame(void)
  */
 static void G_ServerCommand(void)
 {
-    const char *cmd = gi.argv(0);
+    char *cmd = gi.argv(0);
 
-    if (Q_stricmp((char *)cmd, "addbot") == 0) {
+    if (Q_stricmp(cmd, "addbot") == 0) {
         /* Handled via gi.AddCommandString routed through SV_AddBot_f
          * in bot_main.c.  Nothing to do here except acknowledge. */
         gi.dprintf("Use: sv addbot [team] [class] [skill]\n");
-    } else if (Q_stricmp((char *)cmd, "removebot") == 0) {
+    } else if (Q_stricmp(cmd, "removebot") == 0) {
         gi.dprintf("Use: sv removebot <name>\n");
-    } else if (Q_stricmp((char *)cmd, "listbots") == 0) {
+    } else if (Q_stricmp(cmd, "listbots") == 0) {
         /* List bots directly */
         int i, count = 0;
         gi.dprintf("Active bots (%d / %d):\n", num_bots, MAX_BOTS);

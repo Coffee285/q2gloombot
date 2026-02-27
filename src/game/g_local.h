@@ -229,10 +229,29 @@ struct edict_s {
 };
 
 /* ----------------------------------------------------------------
+   Level-global state (cleared on each map load)
+   ---------------------------------------------------------------- */
+typedef struct {
+    int    framenum;
+    float  time;
+
+    char   level_name[MAX_QPATH];
+    char   mapname[MAX_QPATH];
+    char   nextmap[MAX_QPATH];
+
+    float  intermissiontime;
+    char  *changemap;
+    int    exitintermission;
+    vec3_t intermission_origin;
+    vec3_t intermission_angle;
+} level_locals_t;
+
+/* ----------------------------------------------------------------
    Globals shared between game modules
    ---------------------------------------------------------------- */
-extern game_import_t gi;
-extern game_export_t globals;
+extern game_import_t   gi;
+extern game_export_t   globals;
+extern level_locals_t  level;
 
 extern edict_t  *g_edicts;
 extern int       num_bots;

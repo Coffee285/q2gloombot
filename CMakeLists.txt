@@ -26,24 +26,24 @@ set(BOT_SOURCES
     src/bot/team/bot_team.c
 )
 
-# Per-class bot behaviour modules
+# Per-class bot behaviour modules (one per Gloom class)
 set(BOT_CLASS_SOURCES
-    src/bot/classes/bot_class_marine.c
-    src/bot/classes/bot_class_grunt.c
-    src/bot/classes/bot_class_officer.c
-    src/bot/classes/bot_class_recon.c
-    src/bot/classes/bot_class_sniper.c
-    src/bot/classes/bot_class_engineer.c
-    src/bot/classes/bot_class_cyborg.c
-    src/bot/classes/bot_class_commando.c
-    src/bot/classes/bot_class_stinger.c
-    src/bot/classes/bot_class_wraith.c
-    src/bot/classes/bot_class_droid.c
-    src/bot/classes/bot_class_flyer.c
-    src/bot/classes/bot_class_hive.c
-    src/bot/classes/bot_class_carrier.c
-    src/bot/classes/bot_class_acid.c
-    src/bot/classes/bot_class_breeder.c
+    src/bot/classes/bot_class_marine_light.c
+    src/bot/classes/bot_class_marine_assault.c
+    src/bot/classes/bot_class_marine_heavy.c
+    src/bot/classes/bot_class_marine_laser.c
+    src/bot/classes/bot_class_marine_battle.c
+    src/bot/classes/bot_class_marine_elite.c
+    src/bot/classes/bot_class_builder.c
+    src/bot/classes/bot_class_builder_adv.c
+    src/bot/classes/bot_class_granger.c
+    src/bot/classes/bot_class_dretch.c
+    src/bot/classes/bot_class_spiker.c
+    src/bot/classes/bot_class_kamikaze.c
+    src/bot/classes/bot_class_marauder.c
+    src/bot/classes/bot_class_dragoon.c
+    src/bot/classes/bot_class_guardian.c
+    src/bot/classes/bot_class_tyrant.c
 )
 
 set(BOT_BUILD_SOURCES
@@ -65,6 +65,11 @@ target_include_directories(${DLL_OUTPUT_NAME} PRIVATE
     src/game
     src/gloom
     src/bot
+    src/bot/nav
+    src/bot/combat
+    src/bot/team
+    src/bot/build
+    src/bot/classes
 )
 
 # -----------------------------------------------------------------------
@@ -90,7 +95,7 @@ else()
         -Wno-unused-function
         -fvisibility=default
     )
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "i.86|x86")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-6]86$")
         target_compile_options(${DLL_OUTPUT_NAME} PRIVATE -m32)
         target_link_options(${DLL_OUTPUT_NAME} PRIVATE -m32)
     endif()
