@@ -28,11 +28,13 @@ typedef enum {
     STRUCT_SPIKER,        /* auto-attack acid-spit turret                   */
     STRUCT_COCOON,        /* heals nearby aliens over time                  */
     STRUCT_OBSTACLE,      /* living wall — blocks corridors                 */
-    STRUCT_ACID_TUBE,     /* legacy alias for STRUCT_SPIKER                 */
     STRUCT_OVERMIND,      /* alien primary structure                        */
 
     STRUCT_MAX
 } gloom_struct_type_t;
+
+/* Legacy alias: STRUCT_ACID_TUBE is the same as STRUCT_SPIKER */
+#define STRUCT_ACID_TUBE STRUCT_SPIKER
 
 /* -----------------------------------------------------------------------
    Build priorities

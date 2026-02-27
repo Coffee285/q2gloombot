@@ -23,7 +23,7 @@
 #define BIOTECH_SELF_FLEE_PCT    0.40f  /* flee when own HP drops this low  */
 #define BIOTECH_ESCORT_RANGE     300.0f /* stay within this range of VIP    */
 
-/* Target teammate priority (higher index = lower priority) */
+/* Target teammate priority (ordered from highest to lowest priority) */
 static const gloom_class_t biotech_escort_priority[] = {
     GLOOM_CLASS_MECH,
     GLOOM_CLASS_EXTERMINATOR,

@@ -85,6 +85,8 @@ static team_snapshot_t BuildTeamSnapshot(int team)
     snap.alive_count    = count;
     snap.avg_hp_pct     = (count > 0) ? hp_sum / (float)count : 0.0f;
     snap.avg_class_tier = (count > 0) ? tier_sum / count : 1;
+    /* spawn_count is queried from the team-wide system, not accumulated
+     * from individual bot fields (which only track what each builder built) */
     snap.spawn_count    = BotTeam_CountSpawnPoints(team);
 
     /* Power score: alive bots × tier × HP */

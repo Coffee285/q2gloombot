@@ -23,6 +23,7 @@
    ----------------------------------------------------------------------- */
 #define KAMIKAZE_BLAST_RADIUS     200.0f   /* detonate within this range    */
 #define KAMIKAZE_CRITICAL_HP_PCT  0.20f    /* immediate detonate threshold  */
+#define KAMIKAZE_LOW_VALUE_DIST_MULT 3.0f  /* low-value target must be this many blast radii away to skip */
 
 /* -----------------------------------------------------------------------
    BotClass_Init_kamikaze
@@ -70,7 +71,7 @@ void BotClass_Think_kamikaze(bot_state_t *bs)
 
         /* Low-value lone Grunt far away: not worth detonating — look for better */
         if (tgt && tgt->gloom_class == GLOOM_CLASS_GRUNT &&
-            bs->combat.target_dist > KAMIKAZE_BLAST_RADIUS * 3.0f) {
+            bs->combat.target_dist > KAMIKAZE_BLAST_RADIUS * KAMIKAZE_LOW_VALUE_DIST_MULT) {
             bs->combat.target         = NULL;
             bs->combat.target_visible = false;
             bs->ai_state              = BOTSTATE_PATROL;
