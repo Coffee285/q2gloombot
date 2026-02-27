@@ -1137,6 +1137,212 @@ TEST(test_chat_no_crash_on_valid_bot)
 }
 
 /* =======================================================================
+   Safety System Tests
+   ======================================================================= */
+
+#include "bot_safety.h"
+
+TEST(test_safe_div_macro)
+{
+    ASSERT_EQ(SAFE_DIV(10, 2), 5);
+    ASSERT_EQ(SAFE_DIV(10, 0), 0);
+    ASSERT_EQ(SAFE_DIV(0, 5), 0);
+    ASSERT_EQ(SAFE_DIV(7, 3), 2);
+}
+
+TEST(test_safe_div_float)
+{
+    float result;
+    result = SAFE_DIV(10.0f, 2.0f);
+    ASSERT_TRUE(result > 4.9f && result < 5.1f);
+    result = SAFE_DIV(10.0f, 0.0f);
+    ASSERT_TRUE(result > -0.1f && result < 0.1f);
+}
+
+TEST(test_array_index_valid)
+{
+    ASSERT_TRUE(ARRAY_INDEX_VALID(0, 10));
+    ASSERT_TRUE(ARRAY_INDEX_VALID(9, 10));
+    ASSERT_FALSE(ARRAY_INDEX_VALID(-1, 10));
+    ASSERT_FALSE(ARRAY_INDEX_VALID(10, 10));
+    ASSERT_FALSE(ARRAY_INDEX_VALID(100, 10));
+}
+
+TEST(test_q_strncpyz)
+{
+    char buf[16];
+
+    Q_strncpyz(buf, "hello", sizeof(buf));
+    ASSERT_STR_EQ(buf, "hello");
+
+    Q_strncpyz(buf, "this is a very long string", sizeof(buf));
+    ASSERT_EQ((int)strlen(buf), 15);  /* truncated to 15 + NUL */
+    ASSERT_EQ(buf[15], '\0');
+
+    /* NULL source should produce empty string */
+    Q_strncpyz(buf, NULL, sizeof(buf));
+    ASSERT_STR_EQ(buf, "");
+
+    /* NULL dest should not crash */
+    Q_strncpyz(NULL, "test", 10);
+    ASSERT_TRUE(1);
+}
+
+TEST(test_entity_ref_basic)
+{
+    bot_entityref_t ref;
+    edict_t ent;
+
+    memset(&ent, 0, sizeof(ent));
+    ent.inuse = true;
+    ent.s.number = 42;
+
+    EntityRef_Set(&ref, &ent);
+    ASSERT_TRUE(EntityRef_IsValid(&ref));
+    ASSERT_EQ(EntityRef_Get(&ref), &ent);
+
+    /* Entity freed */
+    ent.inuse = false;
+    ASSERT_FALSE(EntityRef_IsValid(&ref));
+    ASSERT_NULL(EntityRef_Get(&ref));
+}
+
+TEST(test_entity_ref_recycled)
+{
+    bot_entityref_t ref;
+    edict_t ent;
+
+    memset(&ent, 0, sizeof(ent));
+    ent.inuse = true;
+    ent.s.number = 10;
+
+    EntityRef_Set(&ref, &ent);
+    ASSERT_TRUE(EntityRef_IsValid(&ref));
+
+    /* Simulate entity slot recycled with different number */
+    ent.s.number = 20;
+    ASSERT_FALSE(EntityRef_IsValid(&ref));
+    ASSERT_NULL(EntityRef_Get(&ref));
+}
+
+TEST(test_entity_ref_clear)
+{
+    bot_entityref_t ref;
+    edict_t ent;
+
+    memset(&ent, 0, sizeof(ent));
+    ent.inuse = true;
+    ent.s.number = 5;
+
+    EntityRef_Set(&ref, &ent);
+    ASSERT_TRUE(EntityRef_IsValid(&ref));
+
+    EntityRef_Clear(&ref);
+    ASSERT_FALSE(EntityRef_IsValid(&ref));
+    ASSERT_NULL(EntityRef_Get(&ref));
+}
+
+TEST(test_entity_ref_null_safety)
+{
+    bot_entityref_t ref;
+
+    /* Set with NULL entity */
+    EntityRef_Set(&ref, NULL);
+    ASSERT_FALSE(EntityRef_IsValid(&ref));
+    ASSERT_NULL(EntityRef_Get(&ref));
+
+    /* NULL ref pointer */
+    ASSERT_FALSE(EntityRef_IsValid(NULL));
+    ASSERT_NULL(EntityRef_Get(NULL));
+    EntityRef_Set(NULL, NULL);
+    EntityRef_Clear(NULL);
+    ASSERT_TRUE(1);  /* no crash = pass */
+}
+
+/* =======================================================================
+   Cvar System Tests
+   ======================================================================= */
+
+#include "bot_cvars.h"
+
+TEST(test_cvars_init)
+{
+    test_setup();
+    BotCvars_Init();
+    /* All cvar pointers should be non-NULL after init */
+    ASSERT_NOT_NULL(bot_enable);
+    ASSERT_NOT_NULL(bot_skill);
+    ASSERT_NOT_NULL(bot_skill_min);
+    ASSERT_NOT_NULL(bot_skill_max);
+    ASSERT_NOT_NULL(bot_count);
+    ASSERT_NOT_NULL(bot_aim_skill_scale);
+    ASSERT_NOT_NULL(bot_reaction_scale);
+    ASSERT_NOT_NULL(bot_awareness_range);
+    ASSERT_NOT_NULL(bot_fov);
+    ASSERT_NOT_NULL(bot_aggression);
+    ASSERT_NOT_NULL(bot_teamwork);
+    ASSERT_NOT_NULL(bot_debug_cvar);
+    ASSERT_NOT_NULL(bot_nav_autogen);
+}
+
+/* =======================================================================
+   Config System Tests
+   ======================================================================= */
+
+TEST(test_config_init_names)
+{
+    test_setup();
+    BotCvars_Init();
+    BotConfig_Init();
+    /* Should return valid names */
+    ASSERT_NOT_NULL(BotConfig_NextName(TEAM_ALIEN));
+    ASSERT_NOT_NULL(BotConfig_NextName(TEAM_HUMAN));
+    /* Names should be non-empty */
+    ASSERT_TRUE(strlen(BotConfig_NextName(TEAM_ALIEN)) > 0);
+    ASSERT_TRUE(strlen(BotConfig_NextName(TEAM_HUMAN)) > 0);
+}
+
+TEST(test_config_name_cycling)
+{
+    int i;
+    const char *first_name, *name;
+
+    test_setup();
+    BotCvars_Init();
+    BotConfig_Init();
+
+    first_name = BotConfig_NextName(TEAM_ALIEN);
+    /* After cycling through all 32 names, should wrap back */
+    for (i = 0; i < 31; i++)
+        BotConfig_NextName(TEAM_ALIEN);
+    name = BotConfig_NextName(TEAM_ALIEN);
+    ASSERT_STR_EQ(name, first_name);
+}
+
+/* =======================================================================
+   Autofill System Tests
+   ======================================================================= */
+
+TEST(test_autofill_init)
+{
+    test_setup();
+    BotCvars_Init();
+    BotAutofill_Init();
+    /* Should not crash */
+    ASSERT_TRUE(1);
+}
+
+TEST(test_autofill_frame_no_crash)
+{
+    test_setup();
+    Bot_Init();
+    /* Frame should do nothing when bot_count is 0 */
+    BotAutofill_Frame();
+    ASSERT_TRUE(1);
+    Bot_Shutdown();
+}
+
+/* =======================================================================
    Main
    ======================================================================= */
 int main(void)
@@ -1191,6 +1397,27 @@ int main(void)
     printf("\nChat System Tests:\n");
     RUN_TEST(test_chat_functions_null_safe);
     RUN_TEST(test_chat_no_crash_on_valid_bot);
+
+    printf("\nSafety System Tests:\n");
+    RUN_TEST(test_safe_div_macro);
+    RUN_TEST(test_safe_div_float);
+    RUN_TEST(test_array_index_valid);
+    RUN_TEST(test_q_strncpyz);
+    RUN_TEST(test_entity_ref_basic);
+    RUN_TEST(test_entity_ref_recycled);
+    RUN_TEST(test_entity_ref_clear);
+    RUN_TEST(test_entity_ref_null_safety);
+
+    printf("\nCvar System Tests:\n");
+    RUN_TEST(test_cvars_init);
+
+    printf("\nConfig System Tests:\n");
+    RUN_TEST(test_config_init_names);
+    RUN_TEST(test_config_name_cycling);
+
+    printf("\nAutofill System Tests:\n");
+    RUN_TEST(test_autofill_init);
+    RUN_TEST(test_autofill_frame_no_crash);
 
     printf("\n=====================\n");
     printf("Results: %d tests, %d passed, %d failed\n",
