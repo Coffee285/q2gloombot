@@ -52,3 +52,5 @@ desktop.ini
 
 # Quake 2 game directory symlinks (local setup)
 gloom/
+_codeql_detected_source_root
+_codeql_build_dir
