@@ -42,6 +42,8 @@
 #include "bot_strategy.h"
 #include "bot_build.h"
 #include "bot_upgrade.h"
+#include "bot_personality.h"
+#include "bot_humanize.h"
 
 /* -----------------------------------------------------------------------
    Module globals
@@ -224,6 +226,12 @@ bot_state_t *Bot_Connect(edict_t *ent, int team, float skill)
     ent->client->bot_state = bs;
     ent->client->team      = team;
 
+    /* Generate personality traits (seeded from bot name hash) */
+    Bot_GeneratePersonality(bs);
+
+    /* Initialise human-like behaviour state */
+    Bot_Humanize_Init(bs);
+
     bs->initialized = true;
     num_bots++;
 
@@ -316,10 +324,13 @@ void Bot_Think(bot_state_t *bs)
     /* 3. Run class-specific behavior via AI state machine */
     Bot_RunClassBehavior(bs);
 
-    /* 4. Finalize movement — apply movement to usercmd_t */
+    /* 4. Update human-like behaviour (aim smoothing, drift, hesitation) */
+    Bot_Humanize_Think(bs);
+
+    /* 5. Finalize movement — apply movement to usercmd_t */
     Bot_FinalizeMovement(bs);
 
-    /* 5. Update timers — advance all timing counters */
+    /* 6. Update timers — advance all timing counters */
     Bot_UpdateTimers(bs);
 }
 
@@ -680,8 +691,8 @@ static void Bot_StateCombat(bot_state_t *bs)
         return;
     }
 
-    /* Critical health → flee */
-    if (bs->ent->health <= (int)(bs->ent->max_health * 0.2f)) {
+    /* Critical health → flee (threshold modified by personality) */
+    if (bs->ent->health <= (int)(bs->ent->max_health * Bot_FleeHealthThreshold(bs))) {
         Bot_SetState(bs, BOTSTATE_FLEE);
         return;
     }

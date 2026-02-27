@@ -344,6 +344,9 @@ static void test_setup(void)
 #include "bot_debug.h"
 #include "bot_strategy.h"
 #include "bot_upgrade.h"
+#include "bot_personality.h"
+#include "bot_humanize.h"
+#include "bot_chat.h"
 
 /* =======================================================================
    TEST CASES
@@ -856,6 +859,284 @@ TEST(test_bot_update_timers)
 }
 
 /* =======================================================================
+   Personality System Tests
+   ======================================================================= */
+
+TEST(test_personality_generate)
+{
+    edict_t ent;
+    gclient_t *client = (gclient_t *)calloc(1, sizeof(gclient_t));
+    bot_state_t *bs;
+
+    test_setup();
+    Bot_Init();
+
+    memset(&ent, 0, sizeof(ent));
+    ent.inuse = true;
+    ent.client = client;
+    ent.max_health = 100;
+    ent.health = 100;
+
+    bs = Bot_Connect(&ent, TEAM_HUMAN, 0.5f);
+    ASSERT_NOT_NULL(bs);
+
+    /* All traits must be in [0, 1] */
+    ASSERT_TRUE(bs->personality.aggression  >= 0.0f && bs->personality.aggression  <= 1.0f);
+    ASSERT_TRUE(bs->personality.caution     >= 0.0f && bs->personality.caution     <= 1.0f);
+    ASSERT_TRUE(bs->personality.teamwork    >= 0.0f && bs->personality.teamwork    <= 1.0f);
+    ASSERT_TRUE(bs->personality.patience    >= 0.0f && bs->personality.patience    <= 1.0f);
+    ASSERT_TRUE(bs->personality.build_focus >= 0.0f && bs->personality.build_focus <= 1.0f);
+
+    Bot_Disconnect(&ent);
+    Bot_Shutdown();
+}
+
+TEST(test_personality_deterministic)
+{
+    /* Two bots with the same name must get the same personality */
+    edict_t ent1, ent2;
+    gclient_t *cl1 = (gclient_t *)calloc(1, sizeof(gclient_t));
+    gclient_t *cl2 = (gclient_t *)calloc(1, sizeof(gclient_t));
+    bot_state_t *bs1, *bs2;
+
+    test_setup();
+    Bot_Init();
+
+    memset(&ent1, 0, sizeof(ent1));
+    memset(&ent2, 0, sizeof(ent2));
+    ent1.inuse = true; ent1.client = cl1; ent1.max_health = 100; ent1.health = 100;
+    ent2.inuse = true; ent2.client = cl2; ent2.max_health = 100; ent2.health = 100;
+
+    bs1 = Bot_Connect(&ent1, TEAM_HUMAN, 0.5f);
+    bs2 = Bot_Connect(&ent2, TEAM_HUMAN, 0.5f);
+    ASSERT_NOT_NULL(bs1);
+    ASSERT_NOT_NULL(bs2);
+
+    /* Override names to the same value and regenerate */
+    Com_sprintf(bs1->name, sizeof(bs1->name), "TestBot_Alpha");
+    Com_sprintf(bs2->name, sizeof(bs2->name), "TestBot_Alpha");
+    Bot_GeneratePersonality(bs1);
+    Bot_GeneratePersonality(bs2);
+
+    ASSERT_TRUE(bs1->personality.aggression == bs2->personality.aggression);
+    ASSERT_TRUE(bs1->personality.caution    == bs2->personality.caution);
+    ASSERT_TRUE(bs1->personality.teamwork   == bs2->personality.teamwork);
+    ASSERT_TRUE(bs1->personality.patience   == bs2->personality.patience);
+
+    Bot_Disconnect(&ent1);
+    Bot_Disconnect(&ent2);
+    Bot_Shutdown();
+}
+
+TEST(test_personality_flee_threshold)
+{
+    bot_state_t bs;
+    float threshold;
+
+    test_setup();
+    memset(&bs, 0, sizeof(bs));
+    bs.name[0] = 'A'; bs.name[1] = '\0';
+
+    /* Extremely aggressive bot should have a lower flee threshold */
+    bs.personality.aggression = 1.0f;
+    bs.personality.caution    = 0.0f;
+    threshold = Bot_FleeHealthThreshold(&bs);
+    ASSERT_TRUE(threshold >= 0.05f);   /* clamped minimum */
+
+    /* Extremely cautious bot should have a higher flee threshold */
+    bs.personality.aggression = 0.0f;
+    bs.personality.caution    = 1.0f;
+    threshold = Bot_FleeHealthThreshold(&bs);
+    ASSERT_TRUE(threshold <= 0.60f);   /* clamped maximum */
+    ASSERT_TRUE(threshold > PERSONALITY_BASE_FLEE_HEALTH);
+
+    /* NULL safety */
+    threshold = Bot_FleeHealthThreshold(NULL);
+    ASSERT_TRUE(threshold == PERSONALITY_BASE_FLEE_HEALTH);
+}
+
+TEST(test_personality_ambush_wait)
+{
+    bot_state_t bs;
+    float t;
+
+    test_setup();
+    memset(&bs, 0, sizeof(bs));
+
+    bs.personality.patience = 0.0f;
+    t = Bot_AmbushWaitTime(&bs);
+    ASSERT_TRUE(t > 0.0f);
+
+    bs.personality.patience = 1.0f;
+    t = Bot_AmbushWaitTime(&bs);
+    ASSERT_TRUE(t >= PERSONALITY_BASE_AMBUSH_WAIT);
+
+    /* NULL safety */
+    t = Bot_AmbushWaitTime(NULL);
+    ASSERT_TRUE(t == PERSONALITY_BASE_AMBUSH_WAIT);
+}
+
+TEST(test_personality_should_check_build)
+{
+    bot_state_t bs;
+    edict_t ent;
+    gclient_t *client = (gclient_t *)calloc(1, sizeof(gclient_t));
+    bot_state_t *connected;
+
+    test_setup();
+    Bot_Init();
+
+    /* Non-builder: should always return false */
+    memset(&bs, 0, sizeof(bs));
+    bs.gloom_class = GLOOM_CLASS_GRUNT;
+    ASSERT_FALSE(Bot_ShouldCheckBuild(&bs));
+
+    /* NULL safety */
+    ASSERT_FALSE(Bot_ShouldCheckBuild(NULL));
+
+    /* Builder bot with max build_focus should check every tick */
+    memset(&ent, 0, sizeof(ent));
+    ent.inuse = true;
+    ent.client = client;
+    ent.max_health = 100;
+    ent.health = 100;
+    connected = Bot_Connect(&ent, TEAM_HUMAN, 0.5f);
+    ASSERT_NOT_NULL(connected);
+    connected->gloom_class = GLOOM_CLASS_ENGINEER;
+    connected->personality.build_focus = 1.0f;
+    ASSERT_TRUE(Bot_ShouldCheckBuild(connected));
+
+    Bot_Disconnect(&ent);
+    Bot_Shutdown();
+}
+
+/* =======================================================================
+   Humanize System Tests
+   ======================================================================= */
+
+TEST(test_humanize_init)
+{
+    edict_t ent;
+    gclient_t *client = (gclient_t *)calloc(1, sizeof(gclient_t));
+    bot_state_t *bs;
+
+    test_setup();
+    Bot_Init();
+
+    memset(&ent, 0, sizeof(ent));
+    ent.inuse = true;
+    ent.client = client;
+    ent.max_health = 100;
+    ent.health = 100;
+
+    bs = Bot_Connect(&ent, TEAM_HUMAN, 0.5f);
+    ASSERT_NOT_NULL(bs);
+
+    /* Drift params should be in expected ranges */
+    ASSERT_TRUE(bs->humanize.drift_amplitude >= 5.0f &&
+                bs->humanize.drift_amplitude <= 15.0f);
+    ASSERT_TRUE(bs->humanize.drift_period >= 1.0f &&
+                bs->humanize.drift_period <= 3.0f);
+
+    /* Next look/jump times must be in the future */
+    ASSERT_TRUE(bs->humanize.next_look_time >= level.time);
+    ASSERT_TRUE(bs->humanize.next_jump_time >= level.time);
+
+    Bot_Disconnect(&ent);
+    Bot_Shutdown();
+}
+
+TEST(test_humanize_aim_smoothing)
+{
+    bot_state_t bs;
+
+    test_setup();
+    memset(&bs, 0, sizeof(bs));
+    bs.humanize.view_yaw   = 0.0f;
+    bs.humanize.view_pitch = 0.0f;
+    bs.humanize.drift_period = 1.0f;
+    bs.humanize.drift_amplitude = 5.0f;
+
+    /* Set a target far away; view should move toward it but not snap */
+    Bot_Humanize_SetAimTarget(&bs, 90.0f, 10.0f);
+    Bot_Humanize_Think(&bs);
+
+    ASSERT_TRUE(bs.humanize.view_yaw > 0.0f);
+    ASSERT_TRUE(bs.humanize.view_yaw < 90.0f);
+    ASSERT_TRUE(bs.humanize.view_pitch > 0.0f);
+    ASSERT_TRUE(bs.humanize.view_pitch < 10.0f);
+}
+
+TEST(test_humanize_drift)
+{
+    bot_state_t bs;
+    float drifted;
+
+    test_setup();
+    memset(&bs, 0, sizeof(bs));
+    bs.humanize.drift_amplitude = 10.0f;
+    bs.humanize.drift_phase     = 1.5707963f; /* sin(π/2) = 1.0 */
+
+    drifted = Bot_Humanize_ApplyDrift(&bs, 0.0f);
+    /* With phase=π/2, sin≈1.0, so offset ≈ amplitude */
+    ASSERT_TRUE(drifted > 5.0f && drifted < 15.0f);
+
+    /* NULL safety */
+    ASSERT_TRUE(Bot_Humanize_ApplyDrift(NULL, 45.0f) == 45.0f);
+}
+
+TEST(test_humanize_hesitate_null_safe)
+{
+    test_setup();
+    /* Calling with NULL should return false without crashing */
+    ASSERT_FALSE(Bot_Humanize_ShouldHesitate(NULL));
+}
+
+/* =======================================================================
+   Chat System Tests
+   ======================================================================= */
+
+TEST(test_chat_functions_null_safe)
+{
+    test_setup();
+    /* All chat functions must not crash on NULL input */
+    Bot_Chat_OnKill(NULL);
+    Bot_Chat_OnDeath(NULL);
+    Bot_Chat_OnTeamWin(NULL);
+    Bot_Chat_OnSpawn(NULL);
+    ASSERT_TRUE(1); /* no crash = pass */
+}
+
+TEST(test_chat_no_crash_on_valid_bot)
+{
+    edict_t ent;
+    gclient_t *client = (gclient_t *)calloc(1, sizeof(gclient_t));
+    bot_state_t *bs;
+
+    test_setup();
+    Bot_Init();
+
+    memset(&ent, 0, sizeof(ent));
+    ent.inuse = true;
+    ent.client = client;
+    ent.max_health = 100;
+    ent.health = 100;
+
+    bs = Bot_Connect(&ent, TEAM_HUMAN, 0.5f);
+    ASSERT_NOT_NULL(bs);
+
+    /* None of these should crash */
+    Bot_Chat_OnKill(bs);
+    Bot_Chat_OnDeath(bs);
+    Bot_Chat_OnTeamWin(bs);
+    Bot_Chat_OnSpawn(bs);
+    ASSERT_TRUE(1);
+
+    Bot_Disconnect(&ent);
+    Bot_Shutdown();
+}
+
+/* =======================================================================
    Main
    ======================================================================= */
 int main(void)
@@ -893,6 +1174,23 @@ int main(void)
     RUN_TEST(test_bot_getstate_helper);
     RUN_TEST(test_bot_is_alien_helper);
     RUN_TEST(test_bot_update_timers);
+
+    printf("\nPersonality System Tests:\n");
+    RUN_TEST(test_personality_generate);
+    RUN_TEST(test_personality_deterministic);
+    RUN_TEST(test_personality_flee_threshold);
+    RUN_TEST(test_personality_ambush_wait);
+    RUN_TEST(test_personality_should_check_build);
+
+    printf("\nHumanize System Tests:\n");
+    RUN_TEST(test_humanize_init);
+    RUN_TEST(test_humanize_aim_smoothing);
+    RUN_TEST(test_humanize_drift);
+    RUN_TEST(test_humanize_hesitate_null_safe);
+
+    printf("\nChat System Tests:\n");
+    RUN_TEST(test_chat_functions_null_safe);
+    RUN_TEST(test_chat_no_crash_on_valid_bot);
 
     printf("\n=====================\n");
     printf("Results: %d tests, %d passed, %d failed\n",

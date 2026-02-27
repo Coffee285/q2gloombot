@@ -24,6 +24,34 @@
 #include "gloom_classes.h"
 #include "gloom_structs.h"
 
+/* Forward-declare personality and humanize structs so bot_state_t can
+ * embed them without a circular include.  The full definitions are in
+ * bot_personality.h and bot_humanize.h respectively. */
+typedef struct {
+    float aggression;
+    float caution;
+    float teamwork;
+    float patience;
+    float build_focus;
+} bot_personality_t;
+
+typedef struct {
+    float  view_yaw;
+    float  view_pitch;
+    float  target_yaw;
+    float  target_pitch;
+    float  overshoot_yaw;
+    float  overshoot_decay;
+    float  drift_phase;
+    float  drift_amplitude;
+    float  drift_period;
+    float  speed_reduce_end;
+    float  next_look_time;
+    float  next_jump_time;
+    float  hesitate_end;
+    int    mistake_counter;
+} bot_humanize_state_t;
+
 /* -----------------------------------------------------------------------
    Limits
    ----------------------------------------------------------------------- */
@@ -201,6 +229,12 @@ typedef struct bot_state_s {
 
     vec3_t last_damage_origin;  /* origin of last damage received            */
     float  last_damage_time;    /* game time of last damage                  */
+
+    /* Personality ------------------------------------------------------- */
+    bot_personality_t personality;   /* randomised trait set (see bot_personality.h) */
+
+    /* Humanize ---------------------------------------------------------- */
+    bot_humanize_state_t humanize;   /* smoothed input / imperfect-play state        */
 
     /* Flags ------------------------------------------------------------- */
     qboolean in_use;        /* slot is occupied                              */
