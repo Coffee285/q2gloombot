@@ -35,6 +35,8 @@
  */
 
 #include "bot.h"
+#include "bot_safety.h"
+#include "bot_cvars.h"
 #include "bot_debug.h"
 #include "bot_nav.h"
 #include "bot_combat.h"
@@ -93,6 +95,9 @@ void Bot_Init(void)
     }
 
     /* Initialise subsystems */
+    BotCvars_Init();
+    BotConfig_Init();
+    BotAutofill_Init();
     BotDebug_Init();
     BotNav_Init();
     BotBuild_Init();
@@ -274,9 +279,16 @@ void Bot_Frame(void)
 {
     int i;
 
+    /* If bots are disabled via cvar, skip all processing */
+    if (bot_enable && (int)bot_enable->value == 0)
+        return;
+
     /* If bots are paused (debug), skip thinking */
     if (bot_paused)
         return;
+
+    /* 0. Auto-fill population management */
+    BotAutofill_Frame();
 
     /* 1. Per-frame global state updates */
     BotUpgrade_UpdateGameState();

@@ -267,6 +267,14 @@ void         Bot_UpdateTimers(bot_state_t *bs);
 /* Console command dispatch (implemented in bot_commands.c) */
 qboolean     Bot_ServerCommand(void);
 
+/* Configuration (implemented in bot_config.c) */
+void         BotConfig_Init(void);
+const char  *BotConfig_NextName(int team);
+
+/* Auto-fill system (implemented in bot_autofill.c) */
+void         BotAutofill_Init(void);
+void         BotAutofill_Frame(void);
+
 /* Inline helper: return bot_state_t for an edict, or NULL */
 static inline bot_state_t *Bot_GetState(const edict_t *ent)
 {
