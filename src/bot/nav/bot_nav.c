@@ -26,9 +26,10 @@ void BotNav_Init(void)
 
 void BotNav_LoadMap(const char *mapname)
 {
-    /* TODO: load maps/<mapname>.nav waypoint file */
-    gi.dprintf("BotNav_LoadMap: '%s' (no nav file — bots will roam freely)\n",
-               mapname);
+    Node_Clear();
+    if (!Node_Load(mapname))
+        gi.dprintf("BotNav_LoadMap: '%s' (no nav file — bots will roam freely)\n",
+                   mapname);
 }
 
 void BotNav_FindPath(bot_state_t *bs, vec3_t goal)
@@ -47,10 +48,17 @@ void BotNav_MoveTowardGoal(bot_state_t *bs)
 
 int BotNav_NearestNode(vec3_t origin, qboolean allow_wall_nodes)
 {
-    /* TODO: spatial search in node graph */
-    (void)origin;
-    (void)allow_wall_nodes;
-    return BOT_INVALID_NODE;
+    /*
+     * When wall nodes are not allowed (non-wall-walking class), require
+     * NAV_GROUND so that only floor-level nodes are returned.  Nodes
+     * tagged NAV_GROUND may additionally carry other flags (e.g.
+     * NAV_JUMP, NAV_LADDER) and are still valid; nodes tagged solely
+     * with NAV_WALLCLIMB and without NAV_GROUND are wall/ceiling-only
+     * and are correctly excluded.
+     */
+    unsigned int required = allow_wall_nodes ? 0u : (unsigned int)NAV_GROUND;
+
+    return Node_FindNearest(origin, required, 0.0f);
 }
 
 /*
