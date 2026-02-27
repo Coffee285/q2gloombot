@@ -8,7 +8,10 @@
 
 #include "../bot.h"
 
+/* Canonical implementation in bot_class_wraith.c */
+extern void BotClass_Init_wraith(bot_state_t *bs);
+
 void BotClass_Init_dragoon(bot_state_t *bs)
 {
-    (void)bs; /* TODO: class-specific init */
+    BotClass_Init_wraith(bs);
 }

@@ -8,7 +8,10 @@
 
 #include "../bot.h"
 
+/* Canonical implementation in bot_class_exterminator.c */
+extern void BotClass_Init_exterminator(bot_state_t *bs);
+
 void BotClass_Init_marine_elite(bot_state_t *bs)
 {
-    (void)bs; /* TODO: class-specific init */
+    BotClass_Init_exterminator(bs);
 }

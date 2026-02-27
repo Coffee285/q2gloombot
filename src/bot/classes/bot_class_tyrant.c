@@ -8,7 +8,10 @@
 
 #include "../bot.h"
 
+/* Canonical implementation in bot_class_stalker.c */
+extern void BotClass_Init_stalker(bot_state_t *bs);
+
 void BotClass_Init_tyrant(bot_state_t *bs)
 {
-    (void)bs; /* TODO: class-specific init */
+    BotClass_Init_stalker(bs);
 }

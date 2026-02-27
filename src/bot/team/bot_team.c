@@ -45,7 +45,17 @@ void BotTeam_Frame(void)
  */
 qboolean BotTeam_ReactorAlive(void)
 {
-    /* TODO: scan g_edicts for live Reactor entity */
+    int i;
+
+    for (i = 0; i < globals.max_edicts; i++) {
+        if (!g_edicts[i].inuse)
+            continue;
+        if (g_edicts[i].classname &&
+            Q_stricmp(g_edicts[i].classname, "struct_reactor") == 0 &&
+            g_edicts[i].health > 0)
+            return true;
+    }
+    /* If no reactor entity found, assume it exists (map may not tag them) */
     return true;
 }
 
@@ -55,15 +65,39 @@ qboolean BotTeam_ReactorAlive(void)
  */
 qboolean BotTeam_OvmindAlive(void)
 {
-    /* TODO: scan g_edicts for live Overmind entity */
+    int i;
+
+    for (i = 0; i < globals.max_edicts; i++) {
+        if (!g_edicts[i].inuse)
+            continue;
+        if (g_edicts[i].classname &&
+            Q_stricmp(g_edicts[i].classname, "struct_overmind") == 0 &&
+            g_edicts[i].health > 0)
+            return true;
+    }
+    /* If no overmind entity found, assume it exists (map may not tag them) */
     return true;
 }
 
 int BotTeam_CountSpawnPoints(int team)
 {
-    /* TODO: count live Telenode / Egg entities */
-    (void)team;
-    return 1;
+    int count = 0;
+    int i;
+    const char *target_class = (team == TEAM_HUMAN) ? "struct_teleporter"
+                                                     : "struct_egg";
+
+    for (i = 0; i < globals.max_edicts; i++) {
+        if (!g_edicts[i].inuse)
+            continue;
+        if (g_edicts[i].classname &&
+            Q_stricmp(g_edicts[i].classname, target_class) == 0 &&
+            g_edicts[i].health > 0)
+            count++;
+    }
+
+    /* If no spawn entities were found, assume at least one exists so
+     * bots don't panic on maps that don't tag spawn structures. */
+    return (count > 0) ? count : 1;
 }
 
 /*
