@@ -691,12 +691,12 @@ TEST(test_bot_state_transitions)
 
     /* Simulate: idle bot with no target, after 2+ seconds should
        transition out of IDLE (to PATROL or a role-assigned state) */
-    level.time = 0.5f;
-    bs->state_enter_time = 0.0f;
+    bs->state_enter_time = 0.5f;
     bs->combat.target = NULL;
     bs->combat.target_visible = false;
     bs->next_think_time = 0.0f;
 
+    /* 3.0 - 0.5 = 2.5s idle, exceeds the 2.0s threshold */
     level.time = 3.0f;
     Bot_Frame();
     /* With full integration, bot leaves IDLE via strategy role or timeout */

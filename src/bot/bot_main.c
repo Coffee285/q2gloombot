@@ -393,7 +393,8 @@ void Bot_EvaluateClassUpgrade(bot_state_t *bs)
         if (bs->evos < Gloom_NextEvoCost(bs->gloom_class))
             return;
     } else {
-        if (bs->credits < gloom_class_info[bs->gloom_class].credit_cost)
+        /* Check if bot has any credits to potentially upgrade with */
+        if (bs->credits <= 0)
             return;
         if (bs->class_upgrades > 0)
             return;  /* Already upgraded this life */
@@ -490,9 +491,9 @@ void Bot_FinalizeMovement(bot_state_t *bs)
    ----------------------------------------------------------------------- */
 void Bot_UpdateTimers(bot_state_t *bs)
 {
-    /* Expire stale enemy memories */
+    /* Expire stale enemy memories — iterate backwards to avoid index issues */
     int i;
-    for (i = 0; i < bs->enemy_memory_count; i++) {
+    for (i = bs->enemy_memory_count - 1; i >= 0; i--) {
         if (bs->enemy_memory[i].ent &&
             level.time - bs->enemy_memory[i].last_seen > BOT_ENEMY_MEMORY_TIME) {
             /* Shift remaining entries down */
@@ -502,7 +503,6 @@ void Bot_UpdateTimers(bot_state_t *bs)
             bs->enemy_memory_count--;
             memset(&bs->enemy_memory[bs->enemy_memory_count], 0,
                    sizeof(bot_enemy_memory_t));
-            i--;  /* Re-check this index */
         }
     }
 }
