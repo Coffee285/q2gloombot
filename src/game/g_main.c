@@ -206,6 +206,10 @@ static void G_ServerCommand(void)
 {
     char *cmd = gi.argv(0);
 
+    /* Try bot-specific commands first */
+    if (Bot_ServerCommand())
+        return;
+
     if (Q_stricmp(cmd, "addbot") == 0) {
         /* Handled via gi.AddCommandString routed through SV_AddBot_f
          * in bot_main.c.  Nothing to do here except acknowledge. */
