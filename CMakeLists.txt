@@ -29,6 +29,7 @@ set(BOT_SOURCES
 
 # Per-class bot behaviour modules (one per Gloom class)
 set(BOT_CLASS_SOURCES
+    # Legacy stub classes (kept for compatibility)
     src/bot/classes/bot_class_marine_light.c
     src/bot/classes/bot_class_marine_assault.c
     src/bot/classes/bot_class_marine_heavy.c
@@ -40,15 +41,44 @@ set(BOT_CLASS_SOURCES
     src/bot/classes/bot_class_granger.c
     src/bot/classes/bot_class_dretch.c
     src/bot/classes/bot_class_spiker.c
-    src/bot/classes/bot_class_kamikaze.c
     src/bot/classes/bot_class_marauder.c
     src/bot/classes/bot_class_dragoon.c
-    src/bot/classes/bot_class_guardian.c
     src/bot/classes/bot_class_tyrant.c
+    # Gloom alien class AI modules
+    src/bot/classes/bot_class_breeder.c
+    src/bot/classes/bot_class_hatchling.c
+    src/bot/classes/bot_class_drone.c
+    src/bot/classes/bot_class_wraith.c
+    src/bot/classes/bot_class_kamikaze.c
+    src/bot/classes/bot_class_stinger.c
+    src/bot/classes/bot_class_guardian.c
+    src/bot/classes/bot_class_stalker.c
+    src/bot/classes/bot_alien_common.c
+    # Gloom human class AI modules
+    src/bot/classes/bot_class_engineer.c
+    src/bot/classes/bot_class_grunt.c
+    src/bot/classes/bot_class_st.c
+    src/bot/classes/bot_class_biotech.c
+    src/bot/classes/bot_class_ht.c
+    src/bot/classes/bot_class_commando.c
+    src/bot/classes/bot_class_exterminator.c
+    src/bot/classes/bot_class_mech.c
+    src/bot/classes/bot_human_common.c
 )
 
 set(BOT_BUILD_SOURCES
     src/bot/build/bot_build.c
+    src/bot/build/bot_build_placement.c
+)
+
+set(BOT_TEAM_EXTRA_SOURCES
+    src/bot/team/bot_strategy.c
+    src/bot/team/bot_teamwork.c
+    src/bot/team/bot_mapcontrol.c
+)
+
+set(GLOOM_SOURCES
+    src/gloom/gloom_classes.c
 )
 
 # -----------------------------------------------------------------------
@@ -59,6 +89,8 @@ add_library(${DLL_OUTPUT_NAME} SHARED
     ${BOT_SOURCES}
     ${BOT_CLASS_SOURCES}
     ${BOT_BUILD_SOURCES}
+    ${BOT_TEAM_EXTRA_SOURCES}
+    ${GLOOM_SOURCES}
 )
 
 # Include directories

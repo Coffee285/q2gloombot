@@ -5,6 +5,9 @@ cmake-build-*/
 out/
 bin/
 obj/
+# Exception: the bot build source directory is part of the project
+!src/bot/build/
+!src/bot/build/*
 
 # Compiled DLLs and shared libraries
 *.dll
@@ -52,5 +55,8 @@ desktop.ini
 
 # Quake 2 game directory symlinks (local setup)
 gloom/
+# Exception: the gloom source directory is part of the project
+!src/gloom/
+!src/gloom/*
 _codeql_detected_source_root
 _codeql_build_dir
