@@ -1,0 +1,56 @@
+# Build directories and artifacts
+build/
+build-*/
+cmake-build-*/
+out/
+bin/
+obj/
+
+# Compiled DLLs and shared libraries
+*.dll
+*.so
+*.dylib
+*.pdb
+*.exp
+*.lib
+*.a
+*.o
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+install_manifest.txt
+CTestTestfile.cmake
+
+# IDE files
+.vs/
+.vscode/
+*.suo
+*.user
+*.sdf
+*.opensdf
+*.vcxproj.user
+.idea/
+*.iml
+nbproject/
+*.kdev4
+.kdev_include_paths
+
+# Clangd / LSP
+.clangd
+compile_commands.json
+
+# Navigation data (generated)
+maps/*.nav
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Quake 2 game directory symlinks (local setup)
+gloom/
+_codeql_detected_source_root
+_codeql_build_dir
