@@ -35,6 +35,13 @@
  */
 
 #include "bot.h"
+#include "bot_debug.h"
+#include "bot_nav.h"
+#include "bot_combat.h"
+#include "bot_team.h"
+#include "bot_strategy.h"
+#include "bot_build.h"
+#include "bot_upgrade.h"
 
 /* -----------------------------------------------------------------------
    Module globals
@@ -60,6 +67,8 @@ static void           Bot_SetClass(bot_state_t *bs, int team,
                                     gloom_class_t requested_class);
 static void           Bot_UpdateBuildPriority(bot_state_t *bs);
 static build_priority_t Bot_AssessBuildNeeds(bot_state_t *bs);
+
+/* Forward declarations — console commands (called via G_ServerCommand) */
 static void           SV_AddBot_f(void);
 static void           SV_RemoveBot_f(void);
 static void           SV_ListBots_f(void);
@@ -80,6 +89,14 @@ void Bot_Init(void)
         g_bots[i].in_use    = false;
         g_bots[i].bot_index = i;
     }
+
+    /* Initialise subsystems */
+    BotDebug_Init();
+    BotNav_Init();
+    BotBuild_Init();
+    BotTeam_Init();
+    BotStrategy_Init();
+    BotUpgrade_Init();
 
     /* Suppress unused-function warnings for server command handlers
      * (they are called via pointer from G_ServerCommand in g_main.c) */
@@ -249,6 +266,22 @@ void Bot_Frame(void)
 {
     int i;
 
+    /* If bots are paused (debug), skip thinking */
+    if (bot_paused)
+        return;
+
+    /* 1. Per-frame global state updates */
+    BotUpgrade_UpdateGameState();
+    BotTeam_Frame();
+
+    /* 2. Team strategy updates */
+    BotStrategy_Frame();
+
+    /* 3. Per-frame build structure tracking */
+    BotBuild_UpdateStructures(TEAM_HUMAN);
+    BotBuild_UpdateStructures(TEAM_ALIEN);
+
+    /* 4. Individual bot think */
     for (i = 0; i < MAX_BOTS; i++) {
         bot_state_t *bs = &g_bots[i];
 
@@ -262,6 +295,9 @@ void Bot_Frame(void)
         bs->next_think_time = level.time + bs->think_interval;
         Bot_Think(bs);
     }
+
+    /* 5. Debug display updates */
+    BotDebug_FrameUpdate();
 }
 
 /* -----------------------------------------------------------------------
@@ -271,6 +307,145 @@ void Bot_Think(bot_state_t *bs)
 {
     if (!bs || !bs->ent || !bs->ent->inuse) return;
 
+    /* 1. Update awareness — scan for enemies, update memory */
+    Bot_UpdateAwareness(bs);
+
+    /* 2. Evaluate class upgrade — check if should change class */
+    Bot_EvaluateClassUpgrade(bs);
+
+    /* 3. Run class-specific behavior via AI state machine */
+    Bot_RunClassBehavior(bs);
+
+    /* 4. Finalize movement — apply movement to usercmd_t */
+    Bot_FinalizeMovement(bs);
+
+    /* 5. Update timers — advance all timing counters */
+    Bot_UpdateTimers(bs);
+}
+
+/* =======================================================================
+   Integration helpers
+   ======================================================================= */
+
+/* -----------------------------------------------------------------------
+   Bot_UpdateAwareness  —  scan for enemies, update memory
+   ----------------------------------------------------------------------- */
+void Bot_UpdateAwareness(bot_state_t *bs)
+{
+    edict_t *target;
+
+    /* Refresh cached base-state flags */
+    if (bs->team == TEAM_HUMAN) {
+        bs->build.reactor_exists = BotTeam_ReactorAlive();
+        bs->build.spawn_count    = BotTeam_CountSpawnPoints(TEAM_HUMAN);
+    } else {
+        bs->build.overmind_exists = BotTeam_OvmindAlive();
+        bs->build.spawn_count     = BotTeam_CountSpawnPoints(TEAM_ALIEN);
+    }
+
+    /* Pick the best target using combat priority system */
+    target = BotCombat_PickTarget(bs);
+    if (target) {
+        bs->combat.target = target;
+        bs->combat.target_visible = true;
+        bs->combat.target_last_seen = level.time;
+        VectorCopy(target->s.origin, bs->combat.target_last_pos);
+    } else if (bs->combat.target) {
+        /* Target no longer visible; keep memory for a while */
+        bs->combat.target_visible = false;
+        if (level.time - bs->combat.target_last_seen > BOT_ENEMY_MEMORY_TIME) {
+            bs->combat.target = NULL;
+        }
+    }
+
+    /* Update wall-walk state for aliens */
+    if (bs->team == TEAM_ALIEN && Gloom_ClassCanWallWalk(bs->gloom_class))
+        BotNav_UpdateWallWalk(bs);
+
+    /* Update navigation node */
+    if (bs->ent)
+        bs->nav.current_node = BotNav_NearestNode(bs->ent->s.origin,
+                                                    Bot_CanWallWalk(bs));
+
+    BotDebug_Log(BOT_DEBUG_STATE, "%s: awareness update target=%s node=%d\n",
+                 bs->name,
+                 bs->combat.target ? "YES" : "no",
+                 bs->nav.current_node);
+}
+
+/* -----------------------------------------------------------------------
+   Bot_EvaluateClassUpgrade  —  check if should change class
+   ----------------------------------------------------------------------- */
+void Bot_EvaluateClassUpgrade(bot_state_t *bs)
+{
+    gloom_class_t old_class = bs->gloom_class;
+    gloom_class_t new_class;
+
+    /* Only evaluate when idle or patrolling — not in combat */
+    if (bs->ai_state != BOTSTATE_IDLE && bs->ai_state != BOTSTATE_PATROL)
+        return;
+
+    /* Aliens with enough evos, or humans with enough credits */
+    if (bs->team == TEAM_ALIEN) {
+        gloom_class_t next = Gloom_NextEvolution(bs->gloom_class);
+        if (next == GLOOM_CLASS_MAX)
+            return;
+        if (bs->evos < Gloom_NextEvoCost(bs->gloom_class))
+            return;
+    } else {
+        /* Check if bot has any credits to potentially upgrade with */
+        if (bs->credits <= 0)
+            return;
+        if (bs->class_upgrades > 0)
+            return;  /* Already upgraded this life */
+    }
+
+    new_class = (gloom_class_t)Bot_ChooseClass(bs);
+    if (new_class != old_class) {
+        BotDebug_Log(BOT_DEBUG_UPGRADE,
+                     "%s: upgrade %s -> %s\n",
+                     bs->name,
+                     Gloom_ClassName(old_class),
+                     Gloom_ClassName(new_class));
+    }
+}
+
+/* -----------------------------------------------------------------------
+   Bot_RunClassBehavior  —  execute class-specific AI via state machine
+   ----------------------------------------------------------------------- */
+void Bot_RunClassBehavior(bot_state_t *bs)
+{
+    /* Consult strategy for role assignment */
+    bot_role_t role = BotStrategy_GetRole(bs);
+
+    /* Builder bots may need to override role for critical builds */
+    if (Gloom_ClassCanBuild(bs->gloom_class)) {
+        Bot_UpdateBuildPriority(bs);
+        if (bs->build.priority <= BUILD_PRIORITY_SPAWNS &&
+            bs->ai_state != BOTSTATE_COMBAT) {
+            Bot_SetState(bs, BOTSTATE_BUILD);
+        }
+    }
+
+    /* Role-based state nudges (when idle) */
+    if (bs->ai_state == BOTSTATE_IDLE) {
+        switch (role) {
+        case ROLE_ATTACKER:
+            /* Attackers go patrol aggressively */
+            Bot_SetState(bs, BOTSTATE_PATROL);
+            break;
+        case ROLE_DEFENDER:
+            Bot_SetState(bs, BOTSTATE_DEFEND);
+            break;
+        case ROLE_ESCORT:
+            Bot_SetState(bs, BOTSTATE_ESCORT);
+            break;
+        default:
+            break;
+        }
+    }
+
+    /* Execute current AI state */
     switch (bs->ai_state) {
     case BOTSTATE_IDLE:    Bot_StateIdle(bs);    break;
     case BOTSTATE_PATROL:  Bot_StatePatrol(bs);  break;
@@ -286,6 +461,50 @@ void Bot_Think(bot_state_t *bs)
         bs->ai_state = BOTSTATE_IDLE;
         break;
     }
+
+    /* If in combat, run combat subsystem */
+    if (bs->ai_state == BOTSTATE_COMBAT && bs->combat.target_visible)
+        BotCombat_Think(bs);
+
+    /* Navigation toward goal when moving */
+    if (bs->ai_state == BOTSTATE_PATROL ||
+        bs->ai_state == BOTSTATE_HUNT ||
+        bs->ai_state == BOTSTATE_ESCORT)
+        BotNav_MoveTowardGoal(bs);
+}
+
+/* -----------------------------------------------------------------------
+   Bot_FinalizeMovement  —  apply movement to usercmd_t
+   ----------------------------------------------------------------------- */
+void Bot_FinalizeMovement(bot_state_t *bs)
+{
+    /*
+     * Actual usercmd_t synthesis is handled by the engine interface.
+     * This function is the integration point for converting bot nav/combat
+     * decisions into the movement command sent to the server.
+     */
+    (void)bs;
+}
+
+/* -----------------------------------------------------------------------
+   Bot_UpdateTimers  —  advance all timing counters
+   ----------------------------------------------------------------------- */
+void Bot_UpdateTimers(bot_state_t *bs)
+{
+    /* Expire stale enemy memories — iterate backwards to avoid index issues */
+    int i;
+    for (i = bs->enemy_memory_count - 1; i >= 0; i--) {
+        if (bs->enemy_memory[i].ent &&
+            level.time - bs->enemy_memory[i].last_seen > BOT_ENEMY_MEMORY_TIME) {
+            /* Shift remaining entries down */
+            int j;
+            for (j = i; j < bs->enemy_memory_count - 1; j++)
+                bs->enemy_memory[j] = bs->enemy_memory[j + 1];
+            bs->enemy_memory_count--;
+            memset(&bs->enemy_memory[bs->enemy_memory_count], 0,
+                   sizeof(bot_enemy_memory_t));
+        }
+    }
 }
 
 /* =======================================================================
@@ -295,6 +514,12 @@ void Bot_Think(bot_state_t *bs)
 static void Bot_SetState(bot_state_t *bs, bot_ai_state_t new_state)
 {
     if (bs->ai_state == new_state) return;
+
+    BotDebug_Log(BOT_DEBUG_STATE, "%s: %s -> %s\n",
+                 bs->name,
+                 BotDebug_StateName(bs->ai_state),
+                 BotDebug_StateName(new_state));
+
     bs->prev_ai_state    = bs->ai_state;
     bs->ai_state         = new_state;
     bs->state_enter_time = level.time;

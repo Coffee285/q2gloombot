@@ -223,6 +223,16 @@ void         Bot_Disconnect(edict_t *ent);
 void         Bot_Frame(void);
 void         Bot_Think(bot_state_t *bs);
 
+/* Integration helpers (implemented in bot_main.c) */
+void         Bot_UpdateAwareness(bot_state_t *bs);
+void         Bot_EvaluateClassUpgrade(bot_state_t *bs);
+void         Bot_RunClassBehavior(bot_state_t *bs);
+void         Bot_FinalizeMovement(bot_state_t *bs);
+void         Bot_UpdateTimers(bot_state_t *bs);
+
+/* Console command dispatch (implemented in bot_commands.c) */
+qboolean     Bot_ServerCommand(void);
+
 /* Inline helper: return bot_state_t for an edict, or NULL */
 static inline bot_state_t *Bot_GetState(const edict_t *ent)
 {

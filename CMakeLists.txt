@@ -22,6 +22,8 @@ set(GAME_SOURCES
 set(BOT_SOURCES
     src/bot/bot_main.c
     src/bot/bot_upgrade.c
+    src/bot/bot_debug.c
+    src/bot/bot_commands.c
     src/bot/nav/bot_nav.c
     src/bot/nav/bot_nodes.c
     src/bot/combat/bot_combat.c
@@ -147,3 +149,48 @@ install(TARGETS ${DLL_OUTPUT_NAME}
     LIBRARY DESTINATION gloom
     RUNTIME DESTINATION gloom
 )
+
+# -----------------------------------------------------------------------
+# Test executable — standalone harness (no Quake 2 engine required)
+# -----------------------------------------------------------------------
+set(TEST_SOURCES
+    test/bot_test.c
+    src/bot/bot_main.c
+    src/bot/bot_upgrade.c
+    src/bot/bot_debug.c
+    src/bot/bot_commands.c
+    src/bot/nav/bot_nav.c
+    src/bot/nav/bot_nodes.c
+    src/bot/combat/bot_combat.c
+    src/bot/team/bot_team.c
+    src/bot/team/bot_strategy.c
+    src/bot/team/bot_teamwork.c
+    src/bot/team/bot_mapcontrol.c
+    src/bot/build/bot_build.c
+    src/bot/build/bot_build_placement.c
+    src/gloom/gloom_classes.c
+)
+
+add_executable(bot_test ${TEST_SOURCES})
+
+target_include_directories(bot_test PRIVATE
+    src/game
+    src/gloom
+    src/bot
+    src/bot/nav
+    src/bot/combat
+    src/bot/team
+    src/bot/build
+    src/bot/classes
+)
+
+target_compile_definitions(bot_test PRIVATE BOT_TEST_MODE)
+
+target_link_libraries(bot_test m)
+
+if(NOT MSVC)
+    target_compile_options(bot_test PRIVATE
+        -Wall
+        -Wno-unused-function
+    )
+endif()
