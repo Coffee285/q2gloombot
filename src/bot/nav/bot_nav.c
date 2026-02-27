@@ -20,6 +20,9 @@
 #include "bot_nav.h"
 #include <float.h>
 
+/* Default movement speed for path following (units/sec) */
+#define BOT_MOVEMENT_SPEED 300.0f
+
 void BotNav_Init(void)
 {
     gi.dprintf("BotNav_Init: navigation subsystem ready\n");
@@ -258,7 +261,7 @@ void BotNav_MoveTowardGoal(bot_state_t *bs)
         /* Move toward the next path node */
         if (dist > 0.0f) {
             VectorNormalize(dir);
-            VectorScale(dir, 300.0f, bs->ent->velocity);
+            VectorScale(dir, BOT_MOVEMENT_SPEED, bs->ent->velocity);
         }
     } else {
         /* No valid path — move directly toward goal origin */
@@ -267,7 +270,7 @@ void BotNav_MoveTowardGoal(bot_state_t *bs)
 
         if (dist > bs->nav.arrived_dist && dist > 0.0f) {
             VectorNormalize(dir);
-            VectorScale(dir, 300.0f, bs->ent->velocity);
+            VectorScale(dir, BOT_MOVEMENT_SPEED, bs->ent->velocity);
         }
     }
 }
