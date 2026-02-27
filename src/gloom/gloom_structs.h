@@ -70,12 +70,12 @@ typedef enum {
    ----------------------------------------------------------------------- */
 static inline gloom_struct_type_t Gloom_PrimaryStruct(int team)
 {
-    return (team == 1 /*TEAM_HUMAN*/) ? STRUCT_REACTOR : STRUCT_OVERMIND;
+    return (team == TEAM_HUMAN) ? STRUCT_REACTOR : STRUCT_OVERMIND;
 }
 
 static inline gloom_struct_type_t Gloom_SpawnStruct(int team)
 {
-    return (team == 1 /*TEAM_HUMAN*/) ? STRUCT_TELEPORTER : STRUCT_EGG;
+    return (team == TEAM_HUMAN) ? STRUCT_TELEPORTER : STRUCT_EGG;
 }
 
 #endif /* GLOOM_STRUCTS_H */
