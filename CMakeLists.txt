@@ -24,6 +24,9 @@ set(BOT_SOURCES
     src/bot/bot_upgrade.c
     src/bot/bot_debug.c
     src/bot/bot_commands.c
+    src/bot/bot_personality.c
+    src/bot/bot_humanize.c
+    src/bot/bot_chat.c
     src/bot/nav/bot_nav.c
     src/bot/nav/bot_nodes.c
     src/bot/combat/bot_combat.c
@@ -159,6 +162,9 @@ set(TEST_SOURCES
     src/bot/bot_upgrade.c
     src/bot/bot_debug.c
     src/bot/bot_commands.c
+    src/bot/bot_personality.c
+    src/bot/bot_humanize.c
+    src/bot/bot_chat.c
     src/bot/nav/bot_nav.c
     src/bot/nav/bot_nodes.c
     src/bot/combat/bot_combat.c
