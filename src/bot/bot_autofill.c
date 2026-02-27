@@ -124,7 +124,7 @@ void BotAutofill_Frame(void)
         if (bot_skill_random && (int)bot_skill_random->value) {
             float lo = bot_skill_min ? bot_skill_min->value : 0.2f;
             float hi = bot_skill_max ? bot_skill_max->value : 0.8f;
-            skill = lo + (float)(rand() % 100) / 100.0f * (hi - lo);
+            skill = lo + (rand() / (float)RAND_MAX) * (hi - lo);
         } else {
             skill = bot_skill ? bot_skill->value : 0.5f;
         }
