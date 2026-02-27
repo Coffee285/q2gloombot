@@ -56,8 +56,8 @@ static void Bot_StateUpgrade(bot_state_t *bs);
 
 /* Forward declarations — helpers */
 static void           Bot_SetState(bot_state_t *bs, bot_ai_state_t new_state);
-static void           Bot_ChooseClass(bot_state_t *bs, int team,
-                                      gloom_class_t requested_class);
+static void           Bot_SetClass(bot_state_t *bs, int team,
+                                    gloom_class_t requested_class);
 static void           Bot_UpdateBuildPriority(bot_state_t *bs);
 static build_priority_t Bot_AssessBuildNeeds(bot_state_t *bs);
 static void           SV_AddBot_f(void);
@@ -151,7 +151,7 @@ bot_state_t *Bot_Connect(edict_t *ent, int team, float skill)
     /* Default class: Alien bots start as Dretch (basic tier-1);
      * Human bots start as Marine_Light and accumulate credits. */
     cls = (team == TEAM_HUMAN) ? GLOOM_CLASS_MARINE_LIGHT : GLOOM_CLASS_DRETCH;
-    Bot_ChooseClass(bs, team, cls);
+    Bot_SetClass(bs, team, cls);
 
     Com_sprintf(bs->name, sizeof(bs->name), "Bot_%s_%02d",
                 Gloom_ClassName(bs->gloom_class), i);
@@ -579,7 +579,7 @@ static void Bot_StateUpgrade(bot_state_t *bs)
    Bot class selection
    ======================================================================= */
 
-static void Bot_ChooseClass(bot_state_t *bs, int team, gloom_class_t requested_class)
+static void Bot_SetClass(bot_state_t *bs, int team, gloom_class_t requested_class)
 {
     if (requested_class < GLOOM_CLASS_MAX &&
         Gloom_ClassTeam(requested_class) == team) {
