@@ -1,0 +1,15 @@
+# Enforce LF line endings for all text files committed to this repository.
+* text=auto eol=lf
+
+# Explicitly mark binary file types so git never tries to normalise them.
+*.dll  binary
+*.so   binary
+*.dylib binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.zip  binary
+*.gz   binary
+*.tar  binary
