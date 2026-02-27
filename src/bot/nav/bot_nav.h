@@ -28,6 +28,7 @@
 #define BOT_NAV_H
 
 #include "bot.h"
+#include "bot_nodes.h"
 
 void     BotNav_Init(void);
 void     BotNav_LoadMap(const char *mapname);
