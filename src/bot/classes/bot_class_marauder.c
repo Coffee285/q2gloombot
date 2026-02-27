@@ -8,7 +8,10 @@
 
 #include "../bot.h"
 
+/* Canonical implementation in bot_class_drone.c */
+extern void BotClass_Init_drone(bot_state_t *bs);
+
 void BotClass_Init_marauder(bot_state_t *bs)
 {
-    (void)bs; /* TODO: class-specific init */
+    BotClass_Init_drone(bs);
 }

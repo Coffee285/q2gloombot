@@ -8,7 +8,10 @@
 
 #include "../bot.h"
 
+/* Canonical implementation in bot_class_breeder.c */
+extern void BotClass_Init_breeder(bot_state_t *bs);
+
 void BotClass_Init_granger(bot_state_t *bs)
 {
-    (void)bs; /* TODO: class-specific init */
+    BotClass_Init_breeder(bs);
 }

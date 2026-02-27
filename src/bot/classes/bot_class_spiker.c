@@ -8,7 +8,10 @@
 
 #include "../bot.h"
 
+/* Canonical implementation in bot_class_stinger.c */
+extern void BotClass_Init_stinger(bot_state_t *bs);
+
 void BotClass_Init_spiker(bot_state_t *bs)
 {
-    (void)bs; /* TODO: class-specific init */
+    BotClass_Init_stinger(bs);
 }
