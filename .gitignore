@@ -18,6 +18,7 @@ obj/
 *.lib
 *.a
 *.o
+*.obj
 
 # CMake generated files
 CMakeCache.txt

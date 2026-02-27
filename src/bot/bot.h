@@ -20,6 +20,9 @@
 #ifndef BOT_H
 #define BOT_H
 
+/* GloomBot version string — bump this for every release. */
+#define GLOOMBOT_VERSION "1.0.0"
+
 #include "g_local.h"
 #include "gloom_classes.h"
 #include "gloom_structs.h"

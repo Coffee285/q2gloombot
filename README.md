@@ -1,6 +1,7 @@
 # q2gloombot
 
 > AI bot players for **Gloom** — the Aliens-vs-Humans class-based Quake 2 mod.
+> **Current release: v1.0.0**
 
 ![Build Status](https://img.shields.io/github/actions/workflow/status/Coffee285/q2gloombot/ci.yml?branch=main&label=build)
 ![License](https://img.shields.io/github/license/Coffee285/q2gloombot)

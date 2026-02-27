@@ -13,11 +13,20 @@
  *   sv botpause                       — toggle bot thinking on/off
  *   sv botkick <name>                 — alias for removebot
  *   sv botstrategy [team]             — show current team strategy
+ *   sv botversion                     — print GloomBot version string
  */
 
 #include "bot.h"
 #include "bot_debug.h"
 #include "bot_strategy.h"
+
+/* -----------------------------------------------------------------------
+   SV_BotVersion_f  —  "sv botversion"
+   ----------------------------------------------------------------------- */
+void SV_BotVersion_f(void)
+{
+    gi.dprintf("GloomBot v%s\n", GLOOMBOT_VERSION);
+}
 
 /* -----------------------------------------------------------------------
    SV_BotStatus_f  —  "sv botstatus [name]"
@@ -151,6 +160,10 @@ qboolean Bot_ServerCommand(void)
 {
     const char *cmd = gi.argv(0);
 
+    if (Q_stricmp(cmd, "botversion") == 0) {
+        SV_BotVersion_f();
+        return true;
+    }
     if (Q_stricmp(cmd, "botstatus") == 0) {
         SV_BotStatus_f();
         return true;

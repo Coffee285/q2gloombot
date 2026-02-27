@@ -111,7 +111,7 @@ void Bot_Init(void)
     (void)SV_RemoveBot_f;
     (void)SV_ListBots_f;
 
-    gi.dprintf("Bot_Init: ready (%d slots)\n", MAX_BOTS);
+    gi.dprintf("GloomBot v%s initialized (%d slots)\n", GLOOMBOT_VERSION, MAX_BOTS);
 }
 
 /* -----------------------------------------------------------------------

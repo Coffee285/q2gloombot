@@ -39,6 +39,7 @@ All commands are issued from the **server console** (or an RCON connection) usin
 | `sv botdebug` | `<flag\|all\|none>` | Toggle a debug output flag. See [Debug Flags](#debug-flags) below. |
 | `sv botstrategy` | `[team]` | Print the current team strategy state for `alien`, `human`, or both. |
 | `sv navgen` | *(none)* | Auto-generate navigation nodes for the current map (requires `bot_nav_autogen 1`). |
+| `sv botversion` | *(none)* | Print the GloomBot version string. |
 
 ### Examples
 
