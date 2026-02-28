@@ -83,6 +83,7 @@ Bots are now playing! See the [Installation Guide](docs/INSTALL.md) for full det
 | [README.md](README.md) | This file — project overview and quick start |
 | [docs/INSTALL.md](docs/INSTALL.md) | Full installation guide (binary and source), platform notes, troubleshooting |
 | [docs/MANUAL.md](docs/MANUAL.md) | User manual — console commands, cvar reference, class guide, nav data |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Developer guide — architecture, module reference, contributing |
 
 ---
 

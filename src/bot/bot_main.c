@@ -574,32 +574,26 @@ static build_priority_t Bot_AssessBuildNeeds(bot_state_t *bs)
     if (bs->build.spawn_count == 0)
         return BUILD_PRIORITY_SPAWNS;
 
-    /* Defense expansion */
-    /* (detailed scan in bot_build.c — stub returns DEFENSE) */
-    return BUILD_PRIORITY_DEFENSE;
+    /* Delegate remaining priority decisions to bot_build.c which walks
+     * the full build-order table and checks repair needs. */
+    BotBuild_ChooseNext(bs);
+    return bs->build.priority;
 }
 
 static void Bot_UpdateBuildPriority(bot_state_t *bs)
 {
-    bs->build.priority = Bot_AssessBuildNeeds(bs);
+    build_priority_t urgent = Bot_AssessBuildNeeds(bs);
 
-    switch (bs->build.priority) {
-    case BUILD_PRIORITY_CRITICAL:
+    /* Critical and spawn needs override the build-order table result */
+    if (urgent == BUILD_PRIORITY_CRITICAL) {
+        bs->build.priority      = BUILD_PRIORITY_CRITICAL;
         bs->build.what_to_build = Gloom_PrimaryStruct(bs->team);
-        break;
-    case BUILD_PRIORITY_SPAWNS:
+    } else if (urgent == BUILD_PRIORITY_SPAWNS) {
+        bs->build.priority      = BUILD_PRIORITY_SPAWNS;
         bs->build.what_to_build = Gloom_SpawnStruct(bs->team);
-        break;
-    case BUILD_PRIORITY_DEFENSE:
-        bs->build.what_to_build = (bs->team == TEAM_HUMAN)
-            ? STRUCT_TURRET_MG : STRUCT_ACID_TUBE;
-        break;
-    case BUILD_PRIORITY_REPAIR:
-    case BUILD_PRIORITY_NONE:
-    default:
-        bs->build.what_to_build = STRUCT_NONE;
-        break;
     }
+    /* Otherwise BotBuild_ChooseNext (called in Bot_AssessBuildNeeds)
+     * has already set bs->build.priority and bs->build.what_to_build */
 }
 
 /* =======================================================================

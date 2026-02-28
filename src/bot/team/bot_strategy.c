@@ -74,7 +74,13 @@ static team_snapshot_t BuildTeamSnapshot(int team)
         case GLOOM_CLASS_STINGER:
         case GLOOM_CLASS_DRONE:
         case GLOOM_CLASS_WRAITH:
+        case GLOOM_CLASS_KAMIKAZE:
             tier_sum += 2;  break;
+        case GLOOM_CLASS_GRUNT:
+        case GLOOM_CLASS_BIOTECH:
+        case GLOOM_CLASS_ENGINEER:
+        case GLOOM_CLASS_HATCHLING:
+        case GLOOM_CLASS_BREEDER:
         default:
             tier_sum += 1;  break;
         }
