@@ -5,8 +5,8 @@
  * G_ServerCommand() in g_main.c.
  *
  * Commands:
- *   sv addbot [team] [class] [skill]  — add a bot
- *   sv removebot <name|all>           — remove a bot or all bots
+ *   sv addbot [alien|human] [skill]   — add a bot to the specified team
+ *   sv removebot <name|all>           — remove a named bot or all bots
  *   sv listbots                       — list all active bots
  *   sv botstatus [name]               — detailed status of one or all bots
  *   sv botdebug <flag|all|none>       — toggle debug output flags
@@ -14,10 +14,13 @@
  *   sv botkick <name>                 — alias for removebot
  *   sv botstrategy [team]             — show current team strategy
  *   sv botversion                     — print GloomBot version string
+ *   sv navgen                         — auto-generate navigation nodes for current map
  */
 
 #include "bot.h"
+#include "bot_cvars.h"
 #include "bot_debug.h"
+#include "bot_nav.h"
 #include "bot_strategy.h"
 
 /* -----------------------------------------------------------------------
@@ -153,6 +156,136 @@ void SV_BotStrategy_f(void)
 }
 
 /* -----------------------------------------------------------------------
+   SV_AddBot_f  —  "sv addbot [alien|human] [skill]"
+   ----------------------------------------------------------------------- */
+static void SV_AddBot_f(void)
+{
+    int         team  = TEAM_HUMAN;
+    float       skill = 0.5f;
+    int         argc  = gi.argc();
+    const char *arg;
+    edict_t    *ent;
+    int         i;
+
+    if (argc >= 2) {
+        arg = gi.argv(1);
+        if (Q_stricmp(arg, "alien") == 0)
+            team = TEAM_ALIEN;
+        else
+            team = TEAM_HUMAN;
+    }
+
+    if (argc >= 3) {
+        skill = (float)atof(gi.argv(2));
+        if (skill < 0.0f) skill = 0.0f;
+        if (skill > 1.0f) skill = 1.0f;
+    }
+
+    /* Find a free edict slot beyond the reserved client slots */
+    ent = NULL;
+    for (i = (maxclients ? (int)maxclients->value + 1 : 1);
+         i < globals.max_edicts; i++) {
+        if (!g_edicts[i].inuse) {
+            ent = &g_edicts[i];
+            break;
+        }
+    }
+
+    if (!ent) {
+        gi.dprintf("addbot: no free edict slots\n");
+        return;
+    }
+
+    G_InitEdict(ent);
+    ent->client = (gclient_t *)gi.TagMalloc(sizeof(gclient_t), TAG_GAME);
+    if (!ent->client) {
+        gi.dprintf("addbot: out of memory\n");
+        return;
+    }
+    memset(ent->client, 0, sizeof(gclient_t));
+
+    Bot_Connect(ent, team, skill);
+}
+
+/* -----------------------------------------------------------------------
+   SV_RemoveBot_f  —  "sv removebot <name|all>"
+   ----------------------------------------------------------------------- */
+static void SV_RemoveBot_f(void)
+{
+    const char *name;
+    int i;
+
+    if (gi.argc() < 2) {
+        gi.dprintf("Usage: sv removebot <name|all>\n");
+        return;
+    }
+    name = gi.argv(1);
+
+    if (Q_stricmp(name, "all") == 0) {
+        for (i = 0; i < MAX_BOTS; i++) {
+            if (g_bots[i].in_use)
+                Bot_Disconnect(g_bots[i].ent);
+        }
+        gi.dprintf("All bots removed.\n");
+        return;
+    }
+
+    for (i = 0; i < MAX_BOTS; i++) {
+        if (g_bots[i].in_use &&
+            Q_stricmp(g_bots[i].name, name) == 0) {
+            gi.dprintf("Removing bot '%s'\n", name);
+            Bot_Disconnect(g_bots[i].ent);
+            return;
+        }
+    }
+    gi.dprintf("removebot: '%s' not found\n", name);
+}
+
+/* -----------------------------------------------------------------------
+   SV_ListBots_f  —  "sv listbots"
+   ----------------------------------------------------------------------- */
+static void SV_ListBots_f(void)
+{
+    int i, count = 0;
+
+    gi.dprintf("Active bots (%d / %d):\n", num_bots, MAX_BOTS);
+    for (i = 0; i < MAX_BOTS; i++) {
+        if (g_bots[i].in_use) {
+            gi.dprintf("  [%2d] %-20s team=%-6s class=%-14s skill=%.2f"
+                       " credits=%d evos=%d state=%s\n",
+                       i,
+                       g_bots[i].name,
+                       g_bots[i].team == TEAM_HUMAN ? "Human" : "Alien",
+                       Gloom_ClassName(g_bots[i].gloom_class),
+                       g_bots[i].skill,
+                       g_bots[i].credits,
+                       g_bots[i].evos,
+                       BotDebug_StateName(g_bots[i].ai_state));
+            count++;
+        }
+    }
+    if (count == 0)
+        gi.dprintf("  (none)\n");
+}
+
+/* -----------------------------------------------------------------------
+   SV_NavGen_f  —  "sv navgen"
+   Auto-generate navigation nodes for the current map.
+   ----------------------------------------------------------------------- */
+static void SV_NavGen_f(void)
+{
+    if (!bot_nav_autogen || (int)bot_nav_autogen->value == 0) {
+        gi.dprintf("navgen: bot_nav_autogen is disabled. "
+                   "Set 'bot_nav_autogen 1' first.\n");
+        return;
+    }
+    gi.dprintf("navgen: generating navigation nodes for '%s'...\n",
+               level.mapname);
+    BotNav_LoadMap(level.mapname);
+    gi.dprintf("navgen: done.\n");
+}
+
+/* -----------------------------------------------------------------------
    Bot_ServerCommand  —  dispatch "sv <cmd>" to the appropriate handler
    Returns true if the command was handled.
    ----------------------------------------------------------------------- */
@@ -160,6 +293,22 @@ qboolean Bot_ServerCommand(void)
 {
     const char *cmd = gi.argv(0);
 
+    if (Q_stricmp(cmd, "addbot") == 0) {
+        SV_AddBot_f();
+        return true;
+    }
+    if (Q_stricmp(cmd, "removebot") == 0) {
+        SV_RemoveBot_f();
+        return true;
+    }
+    if (Q_stricmp(cmd, "listbots") == 0) {
+        SV_ListBots_f();
+        return true;
+    }
+    if (Q_stricmp(cmd, "navgen") == 0) {
+        SV_NavGen_f();
+        return true;
+    }
     if (Q_stricmp(cmd, "botversion") == 0) {
         SV_BotVersion_f();
         return true;

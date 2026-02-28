@@ -52,6 +52,7 @@ config/
   skill_medium.cfg
   skill_hard.cfg
   skill_nightmare.cfg
+  server.cfg
 maps/
   README.txt
 ```
@@ -115,24 +116,42 @@ cp maps/*.nav ~/quake2/gloom/maps/
 
 ### Step 7 — Start the server
 
+**Quick start — 6 v 6 bot game on gloom1 (recommended):**
+
 ```
-quake2 +set game gloom +exec gloombot.cfg
+quake2ded +set game gloom +exec server.cfg
 ```
 
-Or for a dedicated server:
+`server.cfg` starts a dedicated server with 6 human-team bots and 6 alien-team
+bots on `gloom1`. Override the map on the command line if desired:
+
+```
+quake2ded +set game gloom +exec server.cfg +map gloom3
+```
+
+**Manual start with listen server (host + play):**
+
+```
+quake2 +set game gloom +exec server.cfg
+```
+
+**Advanced: load only bot settings, map and bots separately:**
 
 ```
 quake2ded +set game gloom +exec gloombot.cfg +map gloom1
 ```
 
-### Step 8 — Add bots
+### Step 8 — Add bots manually (optional)
 
-From the server console:
+Bots are added automatically by `server.cfg`. If you started without it,
+add bots from the server console:
 
 ```
 sv addbot alien 0.5
 sv addbot human 0.5
 ```
+
+Repeat as needed for each bot (e.g. 6 times per team for a 6 v 6 game).
 
 ### Step 9 — Bots are now playing!
 

@@ -201,39 +201,15 @@ static void G_RunFrame(void)
 
 /*
  * G_ServerCommand — handles "sv <cmd>" console commands.
+ * All bot-related commands are dispatched through Bot_ServerCommand().
  */
 static void G_ServerCommand(void)
 {
-    char *cmd = gi.argv(0);
-
-    /* Try bot-specific commands first */
+    /* All known commands are bot commands; dispatch through bot_commands.c */
     if (Bot_ServerCommand())
         return;
 
-    if (Q_stricmp(cmd, "addbot") == 0) {
-        /* Handled via gi.AddCommandString routed through SV_AddBot_f
-         * in bot_main.c.  Nothing to do here except acknowledge. */
-        gi.dprintf("Use: sv addbot [team] [class] [skill]\n");
-    } else if (Q_stricmp(cmd, "removebot") == 0) {
-        gi.dprintf("Use: sv removebot <name>\n");
-    } else if (Q_stricmp(cmd, "listbots") == 0) {
-        /* List bots directly */
-        int i, count = 0;
-        gi.dprintf("Active bots (%d / %d):\n", num_bots, MAX_BOTS);
-        for (i = 0; i < MAX_BOTS; i++) {
-            if (g_bots[i].in_use) {
-                gi.dprintf("  [%2d] %-20s team=%d class=%-10s skill=%.2f\n",
-                           i, g_bots[i].name, g_bots[i].team,
-                           Gloom_ClassName(g_bots[i].gloom_class),
-                           g_bots[i].skill);
-                count++;
-            }
-        }
-        if (count == 0)
-            gi.dprintf("  (none)\n");
-    } else {
-        gi.dprintf("Unknown server command '%s'\n", cmd);
-    }
+    gi.dprintf("Unknown server command '%s'\n", gi.argv(0));
 }
 
 /* -----------------------------------------------------------------------
