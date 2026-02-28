@@ -238,6 +238,14 @@ if ($Clean -and (Test-Path $distDir)) {
 }
 New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 
+# botVersion is populated by the CMake build section; initialise here so the
+# artifact-zip section can reference it regardless of build order.
+$botVersion = '1.0.0'
+# releaseDir and zipPath are also populated by the CMake/artifact sections;
+# initialise here to avoid uninitialised variable errors in other code paths.
+$releaseDir = $null
+$zipPath    = $null
+
 # ---------------------------------------------------------------------------
 # ===  CMake (C/C++) build  ===
 # ---------------------------------------------------------------------------
@@ -445,7 +453,23 @@ if ($hasCMake) {
     # Build (--parallel is generator-agnostic and supported by CMake 3.12+)
     Invoke-BuildCommand 'CMake build' 'cmake' @('--build', $buildDir, '--config', 'Release', '--parallel', '4')
 
-    # Copy artifacts to dist/cmake
+    # Read version from source (default already set above; override if found in header)
+    $botHeader = Join-Path $repoRoot 'src\bot\bot.h'
+    if (Test-Path $botHeader) {
+        $versionLine = Select-String -Path $botHeader -Pattern '#define\s+GLOOMBOT_VERSION\s+"([^"]+)"' |
+                       Select-Object -First 1
+        if ($versionLine -and $versionLine.Matches[0].Groups[1].Value) {
+            $botVersion = $versionLine.Matches[0].Groups[1].Value
+        }
+    }
+    Write-Log "GloomBot version: $botVersion"
+
+    # Assemble a user-friendly release package in dist\q2gloombot-vVERSION\
+    # Users can drop the contents of this folder straight into their Quake 2 gloom directory.
+    $releaseDir = Join-Path $distDir "q2gloombot-v$botVersion"
+    New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+
+    # Copy the built DLL
     $dllPaths = @(
         (Join-Path $buildDir 'Release\gamex86.dll'),
         (Join-Path $buildDir 'gamex86.dll'),
@@ -454,10 +478,29 @@ if ($hasCMake) {
     )
     foreach ($p in $dllPaths) {
         if (Test-Path $p) {
-            Copy-Item $p $cmakeOutDir -Force
-            Write-Log "Artifact: $p -> $cmakeOutDir"
+            Copy-Item $p $releaseDir -Force
+            Write-Log "Artifact: $p -> $releaseDir"
         }
     }
+
+    # Copy companion files that belong in the gloom directory
+    foreach ($item in @('config', 'maps', 'docs')) {
+        $src = Join-Path $repoRoot $item
+        if (Test-Path $src) {
+            Copy-Item $src (Join-Path $releaseDir $item) -Recurse -Force
+            Write-Log "Included: $item -> $releaseDir\$item"
+        }
+    }
+    foreach ($file in @('README.md', 'LICENSE', 'CHANGELOG.md')) {
+        $src = Join-Path $repoRoot $file
+        if (Test-Path $src) {
+            Copy-Item $src $releaseDir -Force
+            Write-Log "Included: $file -> $releaseDir"
+        }
+    }
+
+    # Keep the internal cmake staging dir so other tooling still finds artifacts there
+    Copy-Item (Join-Path $releaseDir '*') $cmakeOutDir -Recurse -Force -ErrorAction SilentlyContinue
 
     # Tests
     if (-not $SkipTests) {
@@ -628,9 +671,18 @@ if ($hasDocker) {
 # ===  Artifact zip  ===
 # ---------------------------------------------------------------------------
 if ($ArtifactZip) {
-    $zipPath = Join-Path $repoRoot "dist-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
+    # Determine the release folder name; fall back to a timestamp-based name when
+    # no CMake build was performed (e.g. Node-only or Python-only projects).
+    if ($hasCMake -and $releaseDir -and (Test-Path $releaseDir)) {
+        $zipName   = "q2gloombot-v$botVersion-windows.zip"
+        $zipSource = $releaseDir
+    } else {
+        $zipName   = "dist-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
+        $zipSource = Join-Path $distDir '*'
+    }
+    $zipPath = Join-Path $repoRoot $zipName
     Write-Log "Creating artifact zip: $zipPath"
-    Compress-Archive -Path "$distDir\*" -DestinationPath $zipPath -Force
+    Compress-Archive -Path $zipSource -DestinationPath $zipPath -Force
     Write-Log "Artifact zip created: $zipPath"
 }
 
@@ -639,10 +691,29 @@ if ($ArtifactZip) {
 # ---------------------------------------------------------------------------
 Write-Log "=== Build complete ==="
 Write-Log "Artifacts: $distDir"
-if ($ArtifactZip) { Write-Log "Zip: $zipPath" }
+if ($zipPath) { Write-Log "Zip: $zipPath" }
 Write-Log "Log: $LogFile"
 Write-Host ""
 Write-Host "Build succeeded." -ForegroundColor Green
+Write-Host ""
+if ($hasCMake -and $zipPath) {
+    Write-Host "============================================================" -ForegroundColor Cyan
+    Write-Host " Installation instructions for end users" -ForegroundColor Cyan
+    Write-Host "============================================================" -ForegroundColor Cyan
+    Write-Host " 1. Locate the zip file:" -ForegroundColor White
+    Write-Host "      $zipPath" -ForegroundColor Yellow
+    Write-Host " 2. Extract the zip — you will get a folder called:" -ForegroundColor White
+    Write-Host "      q2gloombot-v$botVersion" -ForegroundColor Yellow
+    Write-Host " 3. Copy ALL contents of that folder into your Quake 2 gloom" -ForegroundColor White
+    Write-Host "    directory (e.g. C:\Quake2\gloom\)" -ForegroundColor White
+    Write-Host "      gamex86.dll  -> Quake2\gloom\gamex86.dll" -ForegroundColor White
+    Write-Host "      config\      -> Quake2\gloom\config\" -ForegroundColor White
+    Write-Host "      maps\        -> Quake2\gloom\maps\" -ForegroundColor White
+    Write-Host " 4. Launch Quake 2 with the gloom mod and enjoy!" -ForegroundColor White
+    Write-Host "============================================================" -ForegroundColor Cyan
+    Write-Host ""
+}
 Write-Host "Artifacts : $distDir"
+if ($zipPath) { Write-Host "Zip       : $zipPath" }
 Write-Host "Build log : $LogFile"
 exit 0
