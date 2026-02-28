@@ -141,10 +141,18 @@ function Invoke-BuildCommand {
                           -RedirectStandardError  "$env:TEMP\bw_stderr.txt"
     $stdout = Get-Content "$env:TEMP\bw_stdout.txt" -ErrorAction SilentlyContinue
     $stderr = Get-Content "$env:TEMP\bw_stderr.txt" -ErrorAction SilentlyContinue
-    if ($stdout) { $stdout | ForEach-Object { Write-Log "  stdout: $_" 'DEBUG' }; Add-Content $LogFile ($stdout -join "`n") }
-    if ($stderr) { $stderr | ForEach-Object { Write-Log "  stderr: $_" 'DEBUG' }; Add-Content $LogFile ($stderr -join "`n") }
+    if ($stdout) { Add-Content $LogFile ($stdout -join "`n") }
+    if ($stderr) { Add-Content $LogFile ($stderr -join "`n") }
+    if ($VerboseOutput) {
+        if ($stdout) { $stdout | ForEach-Object { Write-Log "  stdout: $_" 'DEBUG' } }
+        if ($stderr) { $stderr | ForEach-Object { Write-Log "  stderr: $_" 'DEBUG' } }
+    }
     if ($proc.ExitCode -ne 0) {
-        Fail "$Description failed (exit $($proc.ExitCode))."
+        # Always show output on failure so the user can diagnose the problem
+        # without needing to re-run with -VerboseOutput.
+        if ($stdout) { $stdout | ForEach-Object { Write-Log "  $_" 'WARN' } }
+        if ($stderr) { $stderr | ForEach-Object { Write-Log "  $_" 'ERROR' } }
+        Fail "$Description failed (exit $($proc.ExitCode)). See output above and $LogFile for details."
     }
 }
 
