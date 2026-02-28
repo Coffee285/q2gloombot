@@ -72,11 +72,6 @@ static void           Bot_SetClass(bot_state_t *bs, int team,
 static void           Bot_UpdateBuildPriority(bot_state_t *bs);
 static build_priority_t Bot_AssessBuildNeeds(bot_state_t *bs);
 
-/* Forward declarations — console commands (called via G_ServerCommand) */
-static void           SV_AddBot_f(void);
-static void           SV_RemoveBot_f(void);
-static void           SV_ListBots_f(void);
-
 /* -----------------------------------------------------------------------
    Bot_Init
    ----------------------------------------------------------------------- */
@@ -104,12 +99,6 @@ void Bot_Init(void)
     BotTeam_Init();
     BotStrategy_Init();
     BotUpgrade_Init();
-
-    /* Suppress unused-function warnings for server command handlers
-     * (they are called via pointer from G_ServerCommand in g_main.c) */
-    (void)SV_AddBot_f;
-    (void)SV_RemoveBot_f;
-    (void)SV_ListBots_f;
 
     gi.dprintf("GloomBot v%s initialized (%d slots)\n", GLOOMBOT_VERSION, MAX_BOTS);
 }
@@ -833,107 +822,4 @@ static void Bot_SetClass(bot_state_t *bs, int team, gloom_class_t requested_clas
     }
     bs->combat.engagement_range =
         gloom_class_info[bs->gloom_class].preferred_range;
-}
-
-/* =======================================================================
-   Server console commands
-   ======================================================================= */
-
-/*
- * "sv addbot [alien|human] [class] [skill]"
- */
-static void SV_AddBot_f(void)
-{
-    int         team  = TEAM_HUMAN;
-    float       skill = 0.5f;
-    int         argc  = gi.argc();
-    const char *arg;
-    edict_t    *ent;
-    int         i;
-
-    if (argc >= 2) {
-        arg = gi.argv(1);
-        if (Q_stricmp(arg, "alien") == 0)
-            team = TEAM_ALIEN;
-        else
-            team = TEAM_HUMAN;
-    }
-
-    if (argc >= 4)
-        skill = (float)atof(gi.argv(3));
-
-    /* Find a free edict slot */
-    ent = NULL;
-    for (i = 0; i < globals.max_edicts; i++) {
-        if (!g_edicts[i].inuse) {
-            ent = &g_edicts[i];
-            break;
-        }
-    }
-
-    if (!ent) {
-        gi.dprintf("addbot: no free edict slots\n");
-        return;
-    }
-
-    G_InitEdict(ent);
-    ent->client = (gclient_t *)gi.TagMalloc(sizeof(gclient_t), TAG_GAME);
-    if (!ent->client) {
-        gi.dprintf("addbot: out of memory\n");
-        return;
-    }
-    memset(ent->client, 0, sizeof(gclient_t));
-
-    Bot_Connect(ent, team, skill);
-}
-
-/*
- * "sv removebot <name>"
- */
-static void SV_RemoveBot_f(void)
-{
-    const char *name;
-    int i;
-
-    if (gi.argc() < 2) {
-        gi.dprintf("Usage: sv removebot <name>\n");
-        return;
-    }
-    name = gi.argv(1);
-
-    for (i = 0; i < MAX_BOTS; i++) {
-        if (g_bots[i].in_use &&
-            Q_stricmp(g_bots[i].name, name) == 0) {
-            Bot_Disconnect(g_bots[i].ent);
-            return;
-        }
-    }
-    gi.dprintf("removebot: '%s' not found\n", name);
-}
-
-/*
- * "sv listbots"
- */
-static void SV_ListBots_f(void)
-{
-    int i, count = 0;
-
-    gi.dprintf("Active bots (%d / %d):\n", num_bots, MAX_BOTS);
-    for (i = 0; i < MAX_BOTS; i++) {
-        if (g_bots[i].in_use) {
-            gi.dprintf("  [%2d] %-20s team=%-6s class=%-14s skill=%.2f"
-                       " credits=%d evos=%d state=%d\n",
-                       i,
-                       g_bots[i].name,
-                       g_bots[i].team == TEAM_HUMAN ? "Human" : "Alien",
-                       Gloom_ClassName(g_bots[i].gloom_class),
-                       g_bots[i].skill,
-                       g_bots[i].credits,
-                       g_bots[i].evos,
-                       (int)g_bots[i].ai_state);
-            count++;
-        }
-    }
-    if (count == 0)
-        gi.dprintf("  (none)\n");
 }
