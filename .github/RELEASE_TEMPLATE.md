@@ -8,16 +8,16 @@
 
 | Platform | File | SHA256 |
 |----------|------|--------|
-| Linux x86 | [q2gloombot-vX.Y.Z-linux-x86.tar.gz](https://github.com/USER/q2gloombot/releases/download/vX.Y.Z/q2gloombot-vX.Y.Z-linux-x86.tar.gz) | `<hash>` |
-| Windows x86 | [q2gloombot-vX.Y.Z-windows-x86.zip](https://github.com/USER/q2gloombot/releases/download/vX.Y.Z/q2gloombot-vX.Y.Z-windows-x86.zip) | `<hash>` |
+| Linux x86 | [q2gloombot-vX.Y.Z-linux-x86.tar.gz](https://github.com/Coffee285/q2gloombot/releases/download/vX.Y.Z/q2gloombot-vX.Y.Z-linux-x86.tar.gz) | `<hash>` |
+| Windows x86 | [q2gloombot-vX.Y.Z-windows-x86.zip](https://github.com/Coffee285/q2gloombot/releases/download/vX.Y.Z/q2gloombot-vX.Y.Z-windows-x86.zip) | `<hash>` |
 
 ## Quick Install
 
 1. Download the archive for your platform from the table above.
-2. Extract it into your Quake II `gloom/` directory.
-3. Edit `config/gloombot.cfg` and `config/bot_config.cfg` to taste.
-4. Launch Quake II and load a map, or run: `sv_game gloom +map <mapname>`
-5. Use the in-game console to add bots: `sv bot_add`
+2. Back up your existing Gloom game DLL (`gamex86.dll` or `gamei386.so`).
+3. Extract the archive contents into your Quake 2 `gloom/` directory.
+4. Start the server: `quake2 +set game gloom +exec gloombot.cfg`
+5. Add bots from the console: `sv addbot alien 0.5`
 
 ## Compatibility
 
