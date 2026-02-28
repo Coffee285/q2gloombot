@@ -166,8 +166,9 @@ function Install-ViaWinget {
         return $false
     }
     Write-Log "Installing $DisplayName via winget..."
-    $acceptArgs = if ($NonInteractive) { @('--accept-package-agreements', '--accept-source-agreements') } else { @() }
-    & winget install --id $PackageId --silent @acceptArgs 2>&1 | Tee-Object -Append -FilePath $LogFile | Write-Log 'DEBUG'
+    $output = & winget install --id $PackageId --silent --accept-package-agreements --accept-source-agreements 2>&1
+    $output | Add-Content -Path $LogFile
+    if ($VerboseOutput) { $output | ForEach-Object { Write-Log $_ 'DEBUG' } }
     return ($LASTEXITCODE -eq 0)
 }
 
@@ -181,8 +182,9 @@ function Install-ViaChoco {
         return $false
     }
     Write-Log "Installing $DisplayName via Chocolatey..."
-    $yesFlag = if ($NonInteractive) { '-y' } else { '' }
-    & choco install $Package $yesFlag 2>&1 | Tee-Object -Append -FilePath $LogFile | Write-Log 'DEBUG'
+    $output = & choco install $Package -y --no-progress 2>&1
+    $output | Add-Content -Path $LogFile
+    if ($VerboseOutput) { $output | ForEach-Object { Write-Log $_ 'DEBUG' } }
     return ($LASTEXITCODE -eq 0)
 }
 
