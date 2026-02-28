@@ -17,6 +17,7 @@ endif()
 # -----------------------------------------------------------------------
 set(GAME_SOURCES
     src/game/g_main.c
+    src/game/q_shared.c
 )
 
 set(BOT_SOURCES
@@ -140,14 +141,6 @@ else()
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-6]86$")
         target_compile_options(${DLL_OUTPUT_NAME} PRIVATE -m32)
         target_link_options(${DLL_OUTPUT_NAME} PRIVATE -m32)
-    endif()
-    # On Windows with MinGW the game DLL's math/utility helpers (VectorLength,
-    # Q_stricmp, etc.) are provided by the Quake 2 engine at load time, just as
-    # they are on Linux.  Allow the linker to leave these symbols unresolved so
-    # the DLL links successfully.  MSVC handles this automatically via its own
-    # import-library mechanism; this flag is only needed for GNU ld (MinGW).
-    if(MINGW)
-        target_link_options(${DLL_OUTPUT_NAME} PRIVATE -Wl,--allow-undefined)
     endif()
 endif()
 
