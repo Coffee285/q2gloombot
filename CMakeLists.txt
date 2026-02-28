@@ -198,7 +198,9 @@ target_include_directories(bot_test PRIVATE
 
 target_compile_definitions(bot_test PRIVATE BOT_TEST_MODE)
 
-target_link_libraries(bot_test m)
+if(NOT MSVC)
+    target_link_libraries(bot_test m)
+endif()
 
 if(NOT MSVC)
     target_compile_options(bot_test PRIVATE
