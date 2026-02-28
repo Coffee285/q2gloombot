@@ -235,7 +235,28 @@ if ($hasCMake) {
     Write-Log "--- CMake build ---"
     Require-Tool 'cmake' 'CMake' 'Kitware.CMake' 'cmake'
 
-    # Prefer MSVC (Visual Studio 2022) if available; fall back to Ninja/MinGW
+    # Ensure a C compiler is available; install MinGW-w64 if nothing is found
+    $hasCC = (Find-Tool 'cl') -or (Find-Tool 'gcc') -or (Find-Tool 'clang')
+    if (-not $hasCC) {
+        if ($NoInstall) {
+            Fail "No C compiler found (cl/gcc/clang). Install Visual Studio Build Tools (https://aka.ms/vs/buildtools) or MinGW-w64 (https://winlibs.com/) and re-run."
+        }
+        Write-Log "No C compiler found — installing MinGW-w64 (GCC for Windows)..." 'WARN'
+        $installed = Install-ViaWinget 'Winlibs.MinGW' 'MinGW-w64 (GCC)'
+        if (-not $installed) { $installed = Install-ViaChoco 'mingw' 'MinGW-w64 (GCC)' }
+        if (-not $installed) {
+            Fail "Could not install a C compiler automatically. Please install Visual Studio Build Tools (https://aka.ms/vs/buildtools) or MinGW-w64 (https://winlibs.com/) and re-run this script."
+        }
+        # Refresh PATH so the newly installed compiler is visible
+        $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+                    [System.Environment]::GetEnvironmentVariable('Path', 'User') + ';' +
+                    $env:Path
+        if (-not ((Find-Tool 'cl') -or (Find-Tool 'gcc') -or (Find-Tool 'clang'))) {
+            Fail "MinGW-w64 was installed but no C compiler (cl/gcc/clang) is still on PATH. Open a new terminal and re-run this script."
+        }
+    }
+
+    # Prefer MSVC (Visual Studio 2022) if available; fall back to Ninja or MinGW Makefiles
     $generator = $null
     if (Find-Tool 'cl') {
         $generator = 'Visual Studio 17 2022'
@@ -243,6 +264,9 @@ if ($hasCMake) {
     } elseif (Find-Tool 'ninja') {
         $generator = 'Ninja'
         Write-Log "Using generator: Ninja"
+    } elseif (Find-Tool 'gcc') {
+        $generator = 'MinGW Makefiles'
+        Write-Log "Using generator: MinGW Makefiles (GCC)"
     } else {
         Write-Log "No preferred generator detected; letting CMake choose the default." 'WARN'
     }
@@ -257,8 +281,8 @@ if ($hasCMake) {
     if ($generator) { $configArgs += @('-G', $generator) }
     Invoke-BuildCommand 'CMake configure' 'cmake' $configArgs
 
-    # Build
-    Invoke-BuildCommand 'CMake build' 'cmake' @('--build', $buildDir, '--config', 'Release', '--', '-j4')
+    # Build (--parallel is generator-agnostic and supported by CMake 3.12+)
+    Invoke-BuildCommand 'CMake build' 'cmake' @('--build', $buildDir, '--config', 'Release', '--parallel', '4')
 
     # Copy artifacts to dist/cmake
     $dllPaths = @(
