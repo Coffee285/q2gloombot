@@ -274,7 +274,7 @@ Check the `bot_build_priority` cvar — it must be greater than 0:
 ```
 bot_build_priority 0.8
 ```
-Builders will also not build if the primary structure (Reactor / Overmind) is intact and all spawn points are alive and `bot_build_priority` is low. Increase the value to make builders more aggressive about constructing.
+Engineer/Breeder bots will also not build if the primary structure (Reactor / Overmind) is intact and all spawn points are alive and `bot_build_priority` is low. Increase the value to make them more aggressive about constructing.
 
 ### "Connection refused / server not reachable"
 

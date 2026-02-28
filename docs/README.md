@@ -13,7 +13,7 @@ Gloom is an asymmetric, team-based mod where **Space Marines** fight **Alien Spi
 | | Humans (Marines) | Aliens |
 |---|---|---|
 | **Resource** | Credits (kills → buy weapons/armour) | Evos (kills → evolve to higher class) |
-| **Builder** | Technician/Builder | Granger |
+| **Builder** | Engineer | Breeder |
 | **Primary structure** | Reactor | Overmind |
 | **Spawn point** | Telenode | Egg |
 | **Win condition** | Destroy the Overmind | Destroy the Reactor |
@@ -45,27 +45,27 @@ config/         Bot configuration
 
 | # | Class | Role |
 |---|-------|------|
-| 0 | Marine_Light | Basic marine; pistol/blaster |
-| 1 | Marine_Assault | Pulse rifle |
-| 2 | Marine_Heavy | Flamethrower / rockets |
-| 3 | Marine_Laser | Energy weapons |
-| 4 | Marine_Battle | Powered battlesuit |
-| 5 | Marine_Elite | Top-tier loadout |
-| 6 | Builder | Constructs base structures |
-| 7 | Builder_Adv | Advanced construction |
+| 0 | Grunt | Basic infantry; pistol/blaster |
+| 1 | ST | Shock Trooper; shotgun/armour |
+| 2 | Biotech | Medic/healer support |
+| 3 | HT | Heavy Trooper; rocket launcher |
+| 4 | Commando | Fast assault; uzi + grenades |
+| 5 | Exterminator | Heavy assault; pulse rifle |
+| 6 | Engineer | Constructs base structures |
+| 7 | Mech | Power armour; dual lasers |
 
 ### Alien (evolution via evos)
 
 | # | Class | Tier | Notes |
 |---|-------|------|-------|
-| 8 | Granger | Builder | Cannot wall-walk |
-| 9 | Dretch | 1 | Fast, tiny biter; wall-walks |
-| 10 | Spiker | 2 | Ranged biological projectile |
+| 8 | Hatchling | 0 | Fast, weak starter; wall-walks |
+| 9 | Drone | 1 | Upgraded melee; wall-walks |
+| 10 | Wraith | 2 | Flying; acid spit |
 | 11 | Kamikaze | 2 | Explosive suicide charge |
-| 12 | Marauder | 3 | Agile pounce attacker |
-| 13 | Dragoon | 3 | Heavy barb volley |
-| 14 | Guardian | 4 | High-HP tank |
-| 15 | Tyrant | 5 | Ultimate fortress-breaker |
+| 12 | Stinger | 2 | Hybrid melee + ranged; wall-walks |
+| 13 | Guardian | 3 | Stealth tank; invisibility |
+| 14 | Breeder | Builder | Alien builder; wall-walks |
+| 15 | Stalker | 4 | Ultimate melee tank |
 
 ---
 
@@ -80,14 +80,14 @@ config/         Bot configuration
 
 ### Alien combat targeting
 
-`Reactor → human Builders → Turrets → Marines`
+`Reactor → human Engineers → Turrets → Marines`
 
 Alien bots prefer wall/ceiling routes to bypass turret fields.  
 Kamikaze class closes to point-blank and detonates on structures.
 
 ### Human combat targeting
 
-`Overmind → Grangers → alien structures → alien players`
+`Overmind → Breeders → alien structures → alien players`
 
 Human bots engage at maximum effective range and fall back toward the Reactor when below 20 % health.
 
@@ -134,5 +134,5 @@ Without a `.nav` file bots will roam randomly.
 sv addbot human 0.5     # add a human bot at medium skill
 sv addbot alien 0.8     # add an alien bot at high skill
 sv listbots             # show active bots
-sv removebot Bot_Dretch_00
+sv removebot Bot_Hatchling_00
 ```

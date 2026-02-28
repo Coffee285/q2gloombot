@@ -25,10 +25,10 @@
 ## Features
 
 - **All 16 Gloom classes** fully implemented with distinct AI behaviour:
-  - **Humans:** Marine Light · Marine Assault · Marine Heavy · Marine Laser · Marine Battle · Marine Elite · Builder · Builder Advanced
-  - **Aliens:** Granger · Dretch · Spiker · Kamikaze · Marauder · Dragoon · Guardian · Tyrant
+  - **Humans:** Grunt · ST · Biotech · HT · Commando · Exterminator · Engineer · Mech
+  - **Aliens:** Hatchling · Drone · Wraith · Kamikaze · Stinger · Guardian · Breeder · Stalker
 - **Asymmetric team strategy** — bots understand each team's unique win condition (destroy Reactor vs destroy Overmind)
-- **Building AI** — Builder and Granger bots construct and repair base structures following a prioritised state machine
+- **Building AI** — Engineer and Breeder bots construct and repair base structures following a prioritised state machine
 - **Navigation system** — A\* pathfinding on pre-generated nav graphs; alien bots use 3-D wall/ceiling routing to bypass turret fields
 - **Class upgrades** — bots spend credits/evos to advance through the upgrade tree
 - **Skill profiles** — four preset difficulty levels (easy / medium / hard / nightmare) plus per-cvar fine-tuning
@@ -73,6 +73,29 @@ Bots are now playing! See the [Installation Guide](docs/INSTALL.md) for full det
 | OS | Windows (x86) or Linux (x86 / x86-64 with 32-bit libc) |
 
 > To **build from source** you additionally need CMake ≥ 3.10 and a C99 compiler (GCC 7+, Clang 6+, or MSVC 2017+).
+
+### Building on Windows
+
+A PowerShell build script (`build-windows.ps1`) is provided for unattended Windows 11 builds.
+It auto-detects the project type, installs missing prerequisites via winget or Chocolatey, runs
+the build, executes the test suite, and bundles artifacts into a `.zip`.
+
+```powershell
+# Standard build (interactive)
+.\build-windows.ps1
+
+# Fully unattended CI build — no prompts, skip tests, produce artifact zip
+.\build-windows.ps1 -NonInteractive -SkipTests
+
+# Clean rebuild with verbose logging
+.\build-windows.ps1 -Clean -VerboseOutput
+
+# Build only — assume all tools already installed
+.\build-windows.ps1 -NoInstall
+```
+
+Artifacts are written to `./dist/` and a `build-windows.log` is created in the repository root.
+See the script header (`Get-Help .\build-windows.ps1`) for the full parameter reference.
 
 ---
 

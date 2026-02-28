@@ -102,8 +102,8 @@ Each bot maintains a `bot_state_t` struct that carries all persistent state acro
 | `COMBAT` | Actively engaging an enemy target |
 | `FLEE` | Retreating toward a safe area (low HP, outnumbered) |
 | `DEFEND` | Hold a position (primary structure, choke point) |
-| `ESCORT` | Follow and protect a Builder/Granger teammate |
-| `BUILD` | Builder/Granger placing or repairing a structure |
+| `ESCORT` | Follow and protect an Engineer/Breeder teammate |
+| `BUILD` | Engineer/Breeder placing or repairing a structure |
 | `EVOLVE` | Alien spending evos to evolve to a higher class |
 | `UPGRADE` | Human spending credits at an Armory |
 
@@ -138,14 +138,14 @@ Gloom-specific data definitions shared across the bot code.
 
 | Index | Human | Index | Alien |
 |-------|-------|-------|-------|
-| 0 | Marine Light | 8 | Granger |
-| 1 | Marine Assault | 9 | Dretch |
-| 2 | Marine Heavy | 10 | Spiker |
-| 3 | Marine Laser | 11 | Kamikaze |
-| 4 | Marine Battle | 12 | Marauder |
-| 5 | Marine Elite | 13 | Dragoon |
-| 6 | Builder | 14 | Guardian |
-| 7 | Builder Advanced | 15 | Tyrant |
+| 0 | Grunt | 8 | Hatchling |
+| 1 | ST | 9 | Drone |
+| 2 | Biotech | 10 | Wraith |
+| 3 | HT | 11 | Kamikaze |
+| 4 | Commando | 12 | Stinger |
+| 5 | Exterminator | 13 | Guardian |
+| 6 | Engineer | 14 | Breeder |
+| 7 | Mech | 15 | Stalker |
 
 ### Bot Core (`src/bot/`)
 
@@ -188,8 +188,8 @@ Target selection and weapon firing with asymmetric priority rules per team.
 | `bot_combat.c` / `.h` | Combat think loop, target picking, aiming, firing | `BotCombat_Think()`, `BotCombat_PickTarget()`, `BotCombat_AimAtTarget()`, `BotCombat_Fire()`, `BotCombat_AimError()` |
 
 **Targeting priorities:**
-- **Human:** Overmind → Grangers → alien structures → alien players
-- **Alien:** Reactor → human Builders → Turrets → Marines
+- **Human:** Overmind → Breeders → alien structures → alien players
+- **Alien:** Reactor → human Engineers → Turrets → Marines
 
 ### Team & Strategy (`src/bot/team/`)
 
@@ -206,17 +206,17 @@ Team-level coordination, strategy selection, and role assignment.
 
 | Strategy | When Selected | Typical Role Mix |
 |----------|---------------|------------------|
-| `DEFEND` | Primary structure under threat | Defenders + Builder |
+| `DEFEND` | Primary structure under threat | Defenders + Engineer |
 | `PUSH` | Team has resource/number advantage | Attackers + Escort |
 | `HARASS` | Stalemate — probe enemy defenses | Scouts + Attackers |
 | `ALLIN` | Enemy primary structure is weak | All Attackers |
-| `REBUILD` | Own primary structure or spawns destroyed | Builders + Defenders |
+| `REBUILD` | Own primary structure or spawns destroyed | Engineers + Defenders |
 
 **Roles (`bot_role_t`):** `BUILDER`, `ATTACKER`, `DEFENDER`, `SCOUT`, `ESCORT`, `HEALER`
 
 ### Building AI (`src/bot/build/`)
 
-Builder/Granger construction and repair logic.
+Engineer/Breeder construction and repair logic.
 
 | File | Purpose | Key Functions |
 |------|---------|---------------|
@@ -240,24 +240,24 @@ One source file per Gloom class, plus shared team logic.
 |------|---------|
 | `bot_human_common.c` | Shared human behaviours (retreat, ammo management, range engagement) |
 | `bot_alien_common.c` | Shared alien behaviours (wall-walk routing, melee patterns, swarm logic) |
-| `bot_class_marine_light.c` | Marine Light (class 0) — basic combat AI |
-| `bot_class_marine_assault.c` | Marine Assault (class 1) — pulse rifle engagement |
-| `bot_class_marine_heavy.c` | Marine Heavy (class 2) — flamethrower/rocket behaviour |
-| `bot_class_marine_laser.c` | Marine Laser (class 3) — energy weapon AI |
-| `bot_class_marine_battle.c` | Marine Battle (class 4) — battlesuit tactics |
-| `bot_class_marine_elite.c` | Marine Elite (class 5) — end-game loadout |
-| `bot_class_builder.c` | Builder (class 6) — delegates to `bot_build.c` |
-| `bot_class_builder_adv.c` | Builder Advanced (class 7) — extended build orders |
-| `bot_class_granger.c` | Granger (class 8) — alien builder |
-| `bot_class_dretch.c` | Dretch (class 9) — wall-walk biter |
-| `bot_class_spiker.c` | Spiker (class 10) — ranged projectile |
+| `bot_class_grunt.c` | Grunt (class 0) — basic combat AI |
+| `bot_class_st.c` | ST — Shock Trooper (class 1) — shotgun/armour engagement |
+| `bot_class_biotech.c` | Biotech (class 2) — medic/healer behaviour |
+| `bot_class_ht.c` | HT — Heavy Trooper (class 3) — rocket launcher AI |
+| `bot_class_commando.c` | Commando (class 4) — fast assault tactics |
+| `bot_class_exterminator.c` | Exterminator (class 5) — heavy assault loadout |
+| `bot_class_engineer.c` | Engineer (class 6) — delegates to `bot_build.c` |
+| `bot_class_mech.c` | Mech (class 7) — power armour / dual laser AI |
+| `bot_class_hatchling.c` | Hatchling (class 8) — fast starter; wall-walk biter |
+| `bot_class_drone.c` | Drone (class 9) — upgraded melee; wall-walks |
+| `bot_class_wraith.c` | Wraith (class 10) — flying; acid spit |
 | `bot_class_kamikaze.c` | Kamikaze (class 11) — suicide charge on structures |
-| `bot_class_marauder.c` | Marauder (class 12) — pounce attacker |
-| `bot_class_dragoon.c` | Dragoon (class 13) — barb volley |
-| `bot_class_guardian.c` | Guardian (class 14) — tank |
-| `bot_class_tyrant.c` | Tyrant (class 15) — fortress-breaker |
+| `bot_class_stinger.c` | Stinger (class 12) — hybrid melee + ranged |
+| `bot_class_guardian.c` | Guardian (class 13) — stealth tank |
+| `bot_class_breeder.c` | Breeder (class 14) — alien builder |
+| `bot_class_stalker.c` | Stalker (class 15) — ultimate melee tank |
 
-> **Legacy class files:** The directory also contains stub files for legacy or alternate class names (e.g. `bot_class_grunt.c`, `bot_class_biotech.c`, `bot_class_engineer.c`, `bot_class_hatchling.c`, `bot_class_breeder.c`). These are kept for backward compatibility with older Gloom versions and map scripts. They are not part of the core 16-class enum but are still compiled into the DLL.
+> **Legacy stub files:** The directory also contains stub files for the old Tremulous-derived class names (e.g. `bot_class_marine_light.c`, `bot_class_granger.c`, `bot_class_dretch.c`). These map to the canonical classes above via preprocessor aliases defined in `gloom_classes.h` and are kept for backward compatibility with older map scripts.
 
 ---
 
@@ -545,10 +545,10 @@ Use `#ifndef` / `#define` / `#endif` guards. The guard name matches the file nam
 Use imperative mood, capitalise the first word, and keep the summary line under 72 characters:
 
 ```
-Add wall-walk support for Marauder class
+Add wall-walk support for Drone class
 
-Marauder bots now use wall/ceiling nodes when routing to avoid
-turret line-of-sight, matching the Dretch wall-walk behaviour.
+Drone bots now use wall/ceiling nodes when routing to avoid
+turret line-of-sight, matching the Hatchling wall-walk behaviour.
 ```
 
 ### Pull requests

@@ -14,13 +14,13 @@ First stable release of GloomBot — AI bot players for the Quake 2 Gloom mod.
 ### Added
 
 - **All 16 Gloom classes** implemented with distinct AI behaviour:
-  - Human classes: Marine Light, Marine Assault, Marine Heavy, Marine Laser,
-    Marine Battle, Marine Elite, Builder, Builder Advanced.
-  - Alien classes: Granger, Dretch, Spiker, Kamikaze, Marauder, Dragoon,
-    Guardian, Tyrant.
+  - Human classes: Grunt, ST, Biotech, HT, Commando, Exterminator,
+    Engineer, Mech.
+  - Alien classes: Hatchling, Drone, Wraith, Kamikaze, Stinger, Guardian,
+    Breeder, Stalker.
 - **A\* pathfinding** on pre-generated nav graphs; alien bots use full 3-D
   wall/ceiling routing to bypass turret fields.
-- **Building AI** — Builder and Granger bots construct and repair base
+- **Building AI** — Engineer and Breeder bots construct and repair base
   structures following a prioritised state machine (CRITICAL → SPAWNS →
   DEFENSE → REPAIR).
 - **Class upgrade system** — bots spend credits (humans) or evos (aliens) to

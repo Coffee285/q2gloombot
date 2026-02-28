@@ -19,7 +19,7 @@ The bot code ships as a drop-in replacement for the Gloom game DLL
    condition (destroy Reactor vs. destroy Overmind) and adapt their tactics.
 3. **A\* pathfinding** — pre-computed nav graphs with full 3-D wall/ceiling
    routing for alien classes; auto-generation when no `.nav` file is present.
-4. **Building AI** — Builder and Granger bots construct and repair base
+4. **Building AI** — Engineer and Breeder bots construct and repair base
    structures following a four-level priority state machine.
 5. **Class upgrade system** — bots earn and spend credits/evos to advance
    through the tech tree at runtime without server restarts.

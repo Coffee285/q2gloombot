@@ -67,7 +67,7 @@ Used with `sv botdebug <flag>`:
 | `state` | Bot state machine transitions |
 | `nav` | Pathfinding and node traversal |
 | `combat` | Target selection and weapon firing |
-| `build` | Builder/Granger structure placement decisions |
+| `build` | Engineer/Breeder structure placement decisions |
 | `strategy` | Team strategy updates |
 | `upgrade` | Class upgrade decisions |
 | `all` | Enable all flags simultaneously |
@@ -114,7 +114,7 @@ Cvars control all bot behaviour at runtime. Set them in `gloombot.cfg` for persi
 |------|---------|-------|-------------|
 | `bot_aggression` | `0.5` | `0.0`–`1.0` | Global aggression modifier. `0` = defensive/passive, `1` = always attacking. |
 | `bot_teamwork` | `0.7` | `0.0`–`1.0` | Tendency to follow team strategy vs acting solo. |
-| `bot_build_priority` | `0.8` | `0.0`–`1.0` | How much Builder/Granger bots prioritise construction over fighting. |
+| `bot_build_priority` | `0.8` | `0.0`–`1.0` | How much Engineer/Breeder bots prioritise construction over fighting. |
 | `bot_upgrade_enabled` | `1` | `0`–`1` | Allow bots to spend credits/evos to upgrade classes. |
 | `bot_upgrade_delay` | `5` | `0`–`30` | Seconds to wait after earning a frag before attempting a class upgrade. |
 | `bot_taunt` | `1` | `0`–`1` | Bots send taunt messages after kills. |
@@ -165,16 +165,16 @@ Human bots earn **credits** from kills and spend them to upgrade through the mar
 
 | # | Class | Role | Notes |
 |---|-------|------|-------|
-| 0 | Marine Light | Basic rifleman | Starting class; pistol/blaster |
-| 1 | Marine Assault | Front-line attacker | Pulse rifle; first upgrade target |
-| 2 | Marine Heavy | Area-denial | Flamethrower or rockets |
-| 3 | Marine Laser | Energy specialist | Long-range energy weapons |
-| 4 | Marine Battle | Armoured assault | Powered battlesuit |
-| 5 | Marine Elite | Top-tier loadout | End-game class |
-| 6 | Builder | Base construction | Builds Reactor, Telenodes, Turrets |
-| 7 | Builder Advanced | Enhanced construction | Faster building, more structure types |
+| 0 | Grunt | Basic infantry | Starting class; pistol/blaster |
+| 1 | ST | Shock Trooper | Shotgun/armour; first upgrade target |
+| 2 | Biotech | Medic/healer | Support class |
+| 3 | HT | Heavy Trooper | Rocket launcher |
+| 4 | Commando | Fast assault | Uzi + grenades |
+| 5 | Exterminator | Heavy assault | End-game pulse rifle |
+| 6 | Engineer | Base construction | Builds Reactor, Telenodes, Turrets |
+| 7 | Mech | Power armour | Dual lasers |
 
-**Human combat targeting priority:** Overmind → Grangers → alien structures → alien players
+**Human combat targeting priority:** Overmind → Breeders → alien structures → alien players
 
 Human bots fall back toward the Reactor when below 20% health.
 
@@ -184,16 +184,16 @@ Alien bots earn **evos** from kills and evolve into higher-tier forms.
 
 | # | Class | Tier | Notes |
 |---|-------|------|-------|
-| 8 | Granger | Builder | Builds Overmind, Eggs, Acid Tubes; cannot wall-walk |
-| 9 | Dretch | 1 | Fast, tiny biter; wall-walks |
-| 10 | Spiker | 2 | Ranged biological projectile |
+| 8 | Hatchling | 0 | Fast, weak starter; wall-walks |
+| 9 | Drone | 1 | Upgraded melee; wall-walks |
+| 10 | Wraith | 2 | Flying; acid spit |
 | 11 | Kamikaze | 2 | Explosive suicide charge against structures |
-| 12 | Marauder | 3 | Agile pounce attacker |
-| 13 | Dragoon | 3 | Heavy barb volley |
-| 14 | Guardian | 4 | High-HP tank |
-| 15 | Tyrant | 5 | Ultimate fortress-breaker |
+| 12 | Stinger | 2 | Hybrid melee + ranged; wall-walks |
+| 13 | Guardian | 3 | Stealth tank; invisibility |
+| 14 | Breeder | Builder | Alien builder; builds Overmind, Eggs, Acid Tubes |
+| 15 | Stalker | 4 | Ultimate melee tank |
 
-**Alien combat targeting priority:** Reactor → human Builders → Turrets → Marines
+**Alien combat targeting priority:** Reactor → human Engineers → Turrets → Marines
 
 Alien bots prefer wall/ceiling routes to bypass turret fields. Kamikaze bots close to point-blank range and detonate against structures.
 
@@ -201,9 +201,9 @@ Alien bots prefer wall/ceiling routes to bypass turret fields. Kamikaze bots clo
 
 ## 5. Team Strategy & AI Behaviour
 
-### Build Priority (Builder / Granger)
+### Build Priority (Engineer / Breeder)
 
-Builder-class bots follow a prioritised state machine:
+Engineer-class bots follow a prioritised state machine:
 
 | Priority | Condition | Action |
 |----------|-----------|--------|
