@@ -135,7 +135,9 @@ function Invoke-BuildCommand {
         [string[]] $Arguments
     )
     Write-Log "Running: $Command $($Arguments -join ' ')"
-    $proc = Start-Process -FilePath $Command -ArgumentList $Arguments `
+    # Quote any argument that contains whitespace so paths with spaces are passed correctly.
+    $quotedArgs = $Arguments | ForEach-Object { if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ } }
+    $proc = Start-Process -FilePath $Command -ArgumentList $quotedArgs `
                           -NoNewWindow -PassThru -Wait `
                           -RedirectStandardOutput "$env:TEMP\bw_stdout.txt" `
                           -RedirectStandardError  "$env:TEMP\bw_stderr.txt"
