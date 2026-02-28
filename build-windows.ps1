@@ -244,12 +244,41 @@ if ($hasCMake) {
             Fail "No C compiler found (cl/gcc/clang). Install Visual Studio Build Tools (https://aka.ms/vs/buildtools) or MinGW-w64 (https://winlibs.com/) and re-run."
         }
         Write-Log "No C compiler found — installing MinGW-w64 (GCC for Windows)..." 'WARN'
+
+        # ---- Attempt 1: winget (Winlibs.MinGW) ----
         $installed = Install-ViaWinget 'Winlibs.MinGW' 'MinGW-w64 (GCC)'
-        if (-not $installed) { $installed = Install-ViaChoco 'mingw' 'MinGW-w64 (GCC)' }
+
+        # ---- Attempt 2: winget (MSYS2 — provides gcc via its own runtime) ----
         if (-not $installed) {
-            Fail "Could not install a C compiler automatically. Please install Visual Studio Build Tools (https://aka.ms/vs/buildtools) or MinGW-w64 (https://winlibs.com/) and re-run this script."
+            $installed = Install-ViaWinget 'MSYS2.MSYS2' 'MSYS2'
         }
-        # Refresh PATH so the newly installed compiler is visible
+
+        # ---- Attempt 3: Chocolatey (bootstrap choco first if not present) ----
+        if (-not $installed) {
+            if (-not (Find-Tool 'choco')) {
+                Write-Log "Chocolatey not found — bootstrapping Chocolatey package manager..." 'WARN'
+                try {
+                    $savedEP = Get-ExecutionPolicy -Scope Process
+                    Set-ExecutionPolicy Bypass -Scope Process -Force
+                    [System.Net.ServicePointManager]::SecurityProtocol = `
+                        [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+                    # Invoke-Expression is the official Chocolatey installation method
+                    # documented at https://chocolatey.org/install — no alternative exists.
+                    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString(
+                        'https://community.chocolatey.org/install.ps1'))
+                    Set-ExecutionPolicy $savedEP -Scope Process -Force
+                    $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+                                [System.Environment]::GetEnvironmentVariable('Path', 'User') + ';' +
+                                $env:Path
+                    Write-Log "Chocolatey bootstrapped successfully."
+                } catch {
+                    Write-Log "Chocolatey bootstrap failed: $_" 'WARN'
+                }
+            }
+            $installed = Install-ViaChoco 'mingw' 'MinGW-w64 (GCC)'
+        }
+
+        # Refresh PATH from registry after any install attempt
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
                     [System.Environment]::GetEnvironmentVariable('Path', 'User') + ';' +
                     $env:Path
@@ -263,10 +292,12 @@ if ($hasCMake) {
             'C:\mingw32\bin',
             'C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin',
             'C:\msys64\mingw64\bin',
+            'C:\msys64\usr\bin',
             'C:\msys64\mingw32\bin',
             (Join-Path $env:ProgramFiles          'mingw-w64\bin'),
             (Join-Path ${env:ProgramFiles(x86)}   'mingw-w64\bin'),
-            (Join-Path $env:LOCALAPPDATA 'Programs\mingw-w64\bin')
+            (Join-Path $env:LOCALAPPDATA 'Programs\mingw-w64\bin'),
+            (Join-Path $env:LOCALAPPDATA 'Programs\mingw64\bin')
         )
         # Also scan winget (WinLibs) user-scoped install location for any Winlibs.MinGW package
         $wingetPackagesDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
@@ -289,8 +320,92 @@ if ($hasCMake) {
             }
         }
 
+        # ---- Attempt 4: broader filesystem scan for any existing gcc.exe ----
         if (-not ((Find-Tool 'cl') -or (Find-Tool 'gcc') -or (Find-Tool 'clang'))) {
-            Fail "MinGW-w64 was installed but no C compiler (cl/gcc/clang) could be found on PATH.`nCommon fixes:`n  1. Close this terminal, open a new one, and re-run the script.`n  2. Verify gcc.exe exists (e.g. C:\tools\mingw64\bin\gcc.exe) and add its folder to your system PATH."
+            Write-Log "Scanning filesystem for existing gcc.exe installations..." 'WARN'
+            $scanRoots = @(
+                'C:\tools', 'C:\msys64', 'C:\mingw64', 'C:\mingw32',
+                $env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA
+            )
+            foreach ($root in $scanRoots) {
+                if (-not (Test-Path $root -ErrorAction SilentlyContinue)) { continue }
+                $gccFound = Get-ChildItem -Path $root -Filter 'gcc.exe' -Recurse `
+                                          -Depth 5 -ErrorAction SilentlyContinue |
+                            Select-Object -First 1
+                if ($gccFound) {
+                    $binDir = $gccFound.DirectoryName
+                    Write-Log "Found gcc.exe via filesystem scan: $binDir"
+                    $env:Path = "$binDir;$env:Path"
+                    break
+                }
+            }
+        }
+
+        # ---- Attempt 5: direct download of MinGW-w64 from WinLibs as last resort ----
+        # Pinned stable URL used when the GitHub API is unreachable; update this to a
+        # newer WinLibs release if this version is no longer available.
+        $FallbackMingwUrl = 'https://github.com/brechtsanders/winlibs_mingw/releases/download/14.2.0posix-18.1.8-12.0.0-ucrt-r1/winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r1.zip'
+        if (-not ((Find-Tool 'cl') -or (Find-Tool 'gcc') -or (Find-Tool 'clang'))) {
+            Write-Log "Attempting direct download of MinGW-w64 from WinLibs..." 'WARN'
+            $mingwLocalDir = Join-Path $env:LOCALAPPDATA 'q2gloombot-mingw'
+            $gccExe        = Join-Path $mingwLocalDir 'bin\gcc.exe'
+            if (-not (Test-Path $gccExe)) {
+                try {
+                    [System.Net.ServicePointManager]::SecurityProtocol = `
+                        [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+                    # Query GitHub API for the latest WinLibs MinGW release.
+                    # Asset name pattern: x86_64, posix threads, SEH exceptions, no LLVM/clang variant.
+                    $mingwUrl = $null
+                    try {
+                        $apiResp = Invoke-RestMethod `
+                            -Uri 'https://api.github.com/repos/brechtsanders/winlibs_mingw/releases/latest' `
+                            -Headers @{ 'User-Agent' = 'q2gloombot-build-script' } `
+                            -ErrorAction SilentlyContinue
+                        $asset = $apiResp.assets |
+                            Where-Object { $_.name -match 'x86_64.*posix.*seh.*\.zip$' -and $_.name -notmatch 'llvm' } |
+                            Select-Object -First 1
+                        if (-not $asset) {
+                            $asset = $apiResp.assets |
+                                Where-Object { $_.name -match 'x86_64.*\.zip$' -and $_.name -notmatch 'llvm' } |
+                                Select-Object -First 1
+                        }
+                        if ($asset) { $mingwUrl = $asset.browser_download_url }
+                    } catch {
+                        Write-Log "GitHub API query failed: $_" 'DEBUG'
+                    }
+                    # Fall back to the pinned URL if the API is unreachable or returns no matching asset
+                    if (-not $mingwUrl) {
+                        $mingwUrl = $FallbackMingwUrl
+                    }
+                    $zipDest = Join-Path $env:TEMP 'mingw64-direct.zip'
+                    Write-Log "Downloading MinGW-w64 from: $mingwUrl"
+                    Invoke-WebRequest -Uri $mingwUrl -OutFile $zipDest -UseBasicParsing
+                    Write-Log "Extracting MinGW-w64 to $mingwLocalDir..."
+                    if (Test-Path $mingwLocalDir) { Remove-Item $mingwLocalDir -Recurse -Force }
+                    Expand-Archive -Path $zipDest -DestinationPath $env:LOCALAPPDATA -Force
+                    # The archive typically extracts to a 'mingw64' subdirectory; rename it
+                    $extracted = Get-ChildItem -Path $env:LOCALAPPDATA -Filter 'mingw64' `
+                                               -Directory -ErrorAction SilentlyContinue |
+                                 Select-Object -First 1
+                    if ($extracted -and ($extracted.FullName -ne $mingwLocalDir)) {
+                        Rename-Item -Path $extracted.FullName -NewName (Split-Path $mingwLocalDir -Leaf)
+                    }
+                    Remove-Item $zipDest -Force -ErrorAction SilentlyContinue
+                } catch {
+                    Write-Log "Direct MinGW-w64 download failed: $_" 'WARN'
+                }
+            } else {
+                Write-Log "Reusing previously downloaded MinGW-w64 at $mingwLocalDir"
+            }
+            if (Test-Path $gccExe) {
+                $binDir = Join-Path $mingwLocalDir 'bin'
+                $env:Path = "$binDir;$env:Path"
+                Write-Log "MinGW-w64 (direct download) added to PATH: $binDir"
+            }
+        }
+
+        if (-not ((Find-Tool 'cl') -or (Find-Tool 'gcc') -or (Find-Tool 'clang'))) {
+            Fail "No C compiler could be found or installed automatically.`nPlease try one of the following:`n  1. Install Visual Studio Build Tools: https://aka.ms/vs/buildtools`n  2. Install MinGW-w64 manually from https://winlibs.com/, add its bin folder to PATH, then re-run.`n  3. Open a new terminal and re-run this script (PATH changes sometimes only take effect in a new session)."
         }
     }
 
