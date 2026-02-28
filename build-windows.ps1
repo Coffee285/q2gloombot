@@ -253,8 +253,44 @@ if ($hasCMake) {
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
                     [System.Environment]::GetEnvironmentVariable('Path', 'User') + ';' +
                     $env:Path
+
+        # Probe common MinGW-w64 installation directories in case the installer
+        # did not (yet) propagate its bin path into the current session's PATH.
+        $mingwProbePaths = @(
+            'C:\tools\mingw64\bin',
+            'C:\tools\mingw32\bin',
+            'C:\mingw64\bin',
+            'C:\mingw32\bin',
+            'C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin',
+            'C:\msys64\mingw64\bin',
+            'C:\msys64\mingw32\bin',
+            (Join-Path $env:ProgramFiles          'mingw-w64\bin'),
+            (Join-Path ${env:ProgramFiles(x86)}   'mingw-w64\bin'),
+            (Join-Path $env:LOCALAPPDATA 'Programs\mingw-w64\bin')
+        )
+        # Also scan winget (WinLibs) user-scoped install location for any Winlibs.MinGW package
+        $wingetPackagesDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+        if (Test-Path $wingetPackagesDir) {
+            Get-ChildItem -Path $wingetPackagesDir -Filter 'Winlibs.MinGW*' -Directory -ErrorAction SilentlyContinue |
+                ForEach-Object {
+                    $binDir = Join-Path $_.FullName 'bin'
+                    if (Test-Path (Join-Path $binDir 'gcc.exe')) {
+                        $mingwProbePaths += $binDir
+                    }
+                }
+        }
+        $pathParts = $env:Path -split ';'
+        foreach ($candidate in $mingwProbePaths) {
+            if ((Test-Path (Join-Path $candidate 'gcc.exe')) -and
+                ($pathParts -notcontains $candidate)) {
+                Write-Log "Adding MinGW bin directory to PATH: $candidate" 'DEBUG'
+                $env:Path = "$candidate;$env:Path"
+                $pathParts += $candidate
+            }
+        }
+
         if (-not ((Find-Tool 'cl') -or (Find-Tool 'gcc') -or (Find-Tool 'clang'))) {
-            Fail "MinGW-w64 was installed but no C compiler (cl/gcc/clang) is still on PATH. Open a new terminal and re-run this script."
+            Fail "MinGW-w64 was installed but no C compiler (cl/gcc/clang) could be found on PATH.`nCommon fixes:`n  1. Close this terminal, open a new one, and re-run the script.`n  2. Verify gcc.exe exists (e.g. C:\tools\mingw64\bin\gcc.exe) and add its folder to your system PATH."
         }
     }
 
