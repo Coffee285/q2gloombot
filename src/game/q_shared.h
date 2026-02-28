@@ -39,7 +39,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <time.h>
 
 typedef unsigned char  byte;
+
+/* qboolean — portable boolean type.
+ * MinGW-w64 UCRT headers (pulled in by <string.h> etc.) define false and true
+ * as macros that expand to the integer constants 0 and 1.  Attempting to use
+ * those tokens as enum member names then produces a compile error:
+ *   "expected identifier before numeric constant"
+ * Guard against this by falling back to a plain int typedef when the macros
+ * are already present (stdbool.h compatible compilers / environments). */
+#ifdef false
+typedef int qboolean;
+#else
 typedef enum { false, true } qboolean;
+#endif
 
 #ifndef NULL
 #define NULL ((void *)0)
